@@ -1,3 +1,5 @@
+"use client"
+
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   Breadcrumb,
@@ -13,14 +15,18 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { ThemeSwitcher } from "@/components/ui/shadcn-io/theme-switcher"
+import { useTheme } from "next-themes"
 
 export default function Page() {
+  const { theme, setTheme } = useTheme()
+
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
+        <header className="flex justify-between px-4 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+          <div className="flex items-center gap-2 ">
             <SidebarTrigger className="-ml-1" />
             <Separator
               orientation="vertical"
@@ -40,6 +46,12 @@ export default function Page() {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
+          <ThemeSwitcher
+            value={theme as "light" | "dark" | "system"}
+            onChange={setTheme}
+            className="scale-110"
+            defaultValue="system"
+          />
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           <div className="grid auto-rows-min gap-4 md:grid-cols-3">
