@@ -4,10 +4,11 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
+    const { id } = await params
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -17,7 +18,7 @@ export async function GET(
     const userTenant = await prisma.userTenant.findFirst({
       where: {
         userId: session.user.id,
-        tenantId: params.id,
+        tenantId: id,
       },
     })
 
@@ -26,7 +27,7 @@ export async function GET(
     }
 
     const count = await prisma.userTenant.count({
-      where: { tenantId: params.id },
+      where: { tenantId: id },
     })
 
     return NextResponse.json({ count })
