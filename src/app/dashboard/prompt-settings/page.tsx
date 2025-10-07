@@ -9,8 +9,9 @@ import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
 import { MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
+import { useConfirmation } from "@/core/providers/confirmation-provider"
 import { PromptSettingForm } from "@/components/prompt-setting-form"
+import { Loading } from "@/components/ui/loading"
 
 
 interface PromptSetting {
@@ -41,10 +42,8 @@ export default function PromptSettingsPage() {
     totalPages: 1
   })
 
-  // Delete confirmation states
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [settingToDelete, setSettingToDelete] = useState<PromptSetting | null>(null)
-  const [deleteLoading, setDeleteLoading] = useState(false)
+  // Delete confirmation
+  const { confirm } = useConfirmation()
 
   // Form states
   const [formDialogOpen, setFormDialogOpen] = useState(false)
@@ -139,24 +138,19 @@ export default function PromptSettingsPage() {
   }, [fetchPromptSettings])
 
   const handleDelete = (setting: PromptSetting) => {
-    setSettingToDelete(setting)
-    setDeleteDialogOpen(true)
-  }
-
-  const handleConfirmDelete = async () => {
-    if (!settingToDelete) return
-
-    setDeleteLoading(true)
-    try {
-      await axios.delete(`/api/prompt-settings/${settingToDelete.id}`)
-      fetchPromptSettings() // Refresh data
-      setDeleteDialogOpen(false)
-      setSettingToDelete(null)
-    } catch (error) {
-      console.error('Error deleting prompt setting:', error)
-    } finally {
-      setDeleteLoading(false)
-    }
+    confirm({
+      title: "Delete Prompt Setting",
+      description: `This will permanently delete the prompt setting "${setting.name}". This action cannot be undone.`,
+      variant: "destructive",
+      onConfirm: async () => {
+        try {
+          await axios.delete(`/api/prompt-settings/${setting.id}`)
+          fetchPromptSettings() // Refresh data
+        } catch (error) {
+          console.error('Error deleting prompt setting:', error)
+        }
+      }
+    })
   }
 
   const handleSearchChange = (value: string) => {
@@ -189,9 +183,9 @@ export default function PromptSettingsPage() {
     fetchPromptSettings()
   }
 
-  if (loading) {
+  if (loading && promptSettings.length === 0) {
     return (
-      <div className="flex justify-center items-center h-64">Loading prompt settings...</div>
+      <Loading message="Loading prompt settings..." />
     )
   }
 
@@ -240,16 +234,7 @@ export default function PromptSettingsPage() {
           onPageChange={handlePageChange}
         />
 
-        {/* Delete Confirmation Dialog */}
-        <ConfirmationDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          title="Delete Prompt Setting"
-          description={`This will permanently delete the prompt setting "${settingToDelete?.name}". This action cannot be undone.`}
-          variant="destructive"
-          loading={deleteLoading}
-          onConfirm={handleConfirmDelete}
-        />
+
 
         {/* Prompt Setting Form Dialog */}
         <PromptSettingForm
