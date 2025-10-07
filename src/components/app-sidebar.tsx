@@ -159,29 +159,63 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     logo: React.ElementType
     plan: string
     id: string
+    role: string
+    userCount: number
   }>>([])
+  const [isLoaded, setIsLoaded] = React.useState(false)
+
+  const fetchUserTenants = async () => {
+    if (!user?.id) return
+
+    try {
+      const response = await axios.get('/api/user-tenants')
+      const data = response.data
+
+      // Get user counts for each tenant
+      const workspacesData = await Promise.all(
+        data.map(async (ut: { tenant: { name: string, id: string }, role: string, tenantId: string }) => {
+          try {
+            const countResponse = await axios.get(`/api/tenants/count/${ut.tenantId}`)
+            const userCount = countResponse.data.count
+            return {
+              name: ut.tenant.name,
+              logo: GalleryVerticalEnd, // Can customize based on tenant
+              plan: ut.role === 'admin' ? 'Admin' : 'Member', // Simple mapping
+              id: ut.tenantId,
+              role: ut.role,
+              userCount,
+            }
+          } catch {
+            // If count fails, use default
+            return {
+              name: ut.tenant.name,
+              logo: GalleryVerticalEnd,
+              plan: ut.role === 'admin' ? 'Admin' : 'Member',
+              id: ut.tenantId,
+              role: ut.role,
+              userCount: 1,
+            }
+          }
+        })
+      )
+      setWorkspaces(workspacesData)
+      setIsLoaded(true)
+    } catch (error) {
+      console.error('Error fetching user tenants:', error)
+      setIsLoaded(true)
+    }
+  }
 
   React.useEffect(() => {
-    if (user?.id) {
-      // Fetch user's tenants
-      const fetchUserTenants = async () => {
-        try {
-          const response = await axios.get(`/api/user-tenants?userId=${user.id}`)
-          const data = response.data
-          const workspacesData = data.map((ut: { tenant: { name: string }, role: string, tenantId: string }) => ({
-            name: ut.tenant.name,
-            logo: GalleryVerticalEnd, // Can customize based on tenant
-            plan: ut.role === 'admin' ? 'Admin' : 'Member', // Simple mapping
-            id: ut.tenantId
-          }))
-          setWorkspaces(workspacesData)
-        } catch (error) {
-          console.error('Error fetching user tenants:', error)
-        }
-      }
+    fetchUserTenants()
+  }, [user?.id])
+
+  React.useEffect(() => {
+    // Refresh workspaces when user changes
+    if (isLoaded) {
       fetchUserTenants()
     }
-  }, [user?.id])
+  }, [user?.activeTenantId])
 
   if (!user) {
     return null // Or some loading state
@@ -190,7 +224,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <WorkspaceSwitcher workspaces={workspaces} />
+        {isLoaded ? (
+          <WorkspaceSwitcher workspaces={workspaces} onWorkspaceChange={fetchUserTenants} />
+        ) : (
+          <div className="h-14 animate-pulse bg-sidebar-accent rounded-md mx-1" />
+        )}
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
