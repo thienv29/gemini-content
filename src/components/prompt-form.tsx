@@ -229,7 +229,7 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1">
           {/* Main Content Area with Two Columns */}
           <div className="flex gap-6 flex-1 min-h-0 py-4">
             {/* Left Column - Content (Primary Editing Area) */}
@@ -246,11 +246,11 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
             </div>
 
             {/* Right Column - Secondary Fields */}
-            <div className="flex-1 space-y-4 overflow-hidden flex flex-col">
+            <div className="flex-1 space-y-4 flex flex-col">
               {/* Name and Description at top */}
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="name">Name</Label>
+                  <Label htmlFor="name" className="mb-2">Name</Label>
                   <Input
                     id="name"
                     value={formData.name}
@@ -260,7 +260,7 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
                   />
                 </div>
                 <div>
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description" className="mb-2">Description</Label>
                   <Textarea
                     id="description"
                     value={formData.description}
