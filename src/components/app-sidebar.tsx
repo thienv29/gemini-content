@@ -16,7 +16,7 @@ import {
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { WorkspaceSwitcher } from "@/components/workspace-switcher"
 import {
   Sidebar,
   SidebarContent,
@@ -119,7 +119,7 @@ const data = {
           url: "#",
         },
         {
-          title: "Team",
+          title: "Workspace",
           url: "#",
         },
         {
@@ -154,7 +154,7 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuthStore()
-  const [teams, setTeams] = React.useState<Array<{
+  const [workspaces, setWorkspaces] = React.useState<Array<{
     name: string
     logo: React.ElementType
     plan: string
@@ -168,13 +168,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         try {
           const response = await axios.get(`/api/user-tenants?userId=${user.id}`)
           const data = response.data
-          const teamsData = data.map((ut: { tenant: { name: string }, role: string, tenantId: string }) => ({
+          const workspacesData = data.map((ut: { tenant: { name: string }, role: string, tenantId: string }) => ({
             name: ut.tenant.name,
             logo: GalleryVerticalEnd, // Can customize based on tenant
             plan: ut.role === 'admin' ? 'Admin' : 'Member', // Simple mapping
             id: ut.tenantId
           }))
-          setTeams(teamsData)
+          setWorkspaces(workspacesData)
         } catch (error) {
           console.error('Error fetching user tenants:', error)
         }
@@ -190,7 +190,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={teams} />
+        <WorkspaceSwitcher workspaces={workspaces} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
