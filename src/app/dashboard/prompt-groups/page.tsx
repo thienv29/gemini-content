@@ -273,7 +273,7 @@ export default function PromptGroupsPage() {
           />
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/50">
-              <Spinner size={24} />
+              <Spinner scale={1.5} />
             </div>
           )}
         </div>
