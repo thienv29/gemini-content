@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { signIn } from "next-auth/react"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import axios from "axios"
+import Image from "next/image"
 
 export function SignupForm({
   className,
@@ -15,7 +16,6 @@ export function SignupForm({
 }: React.ComponentProps<"div">) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const router = useRouter()
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -29,27 +29,21 @@ export function SignupForm({
     const confirmPassword = formData.get("confirmPassword") as string
 
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, email, password, confirmPassword }),
+      await axios.post("/api/auth/signup", { name, email, password, confirmPassword })
+      // Successfully signed up, redirect to login or auto-login
+      await signIn("credentials", {
+        email: email,
+        password: password,
+        callbackUrl: "/dashboard",
       })
-
-      if (response.ok) {
-        // Successfully signed up, redirect to login or auto-login
-        await signIn("credentials", {
-          email: email,
-          password: password,
-          callbackUrl: "/dashboard",
-        })
-      } else {
-        const data = await response.json()
-        setError(data.error || "Something went wrong")
+    } catch (error) {
+      let message = "Something went wrong"
+      if (axios.isAxiosError(error)) {
+        message = error.response?.data?.error || error.message
+      } else if (error instanceof Error) {
+        message = error.message
       }
-    } catch (err) {
-      setError("Something went wrong")
+      setError(message)
     } finally {
       setIsLoading(false)
     }
@@ -144,9 +138,11 @@ export function SignupForm({
             </div>
           </form>
           <div className="bg-muted relative hidden md:block">
-            <img
+            <Image
               src="/placeholder.svg"
               alt="Image"
+              width={400}
+              height={400}
               className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
             />
           </div>

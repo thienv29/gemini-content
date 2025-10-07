@@ -16,7 +16,15 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
 
     // Build where clause
-    const where: any = { tenantId }
+    const where: {
+      tenantId: string
+      OR?: Array<{
+        name?: { contains: string; mode: string }
+        description?: { contains: string; mode: string }
+        content?: { contains: string; mode: string }
+      }>
+    } = { tenantId }
+
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },

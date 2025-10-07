@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { signIn } from "next-auth/react"
 import { useState } from "react"
+import Image from "next/image"
 
 export function LoginForm({
   className,
@@ -37,7 +38,7 @@ export function LoginForm({
         // Redirect will be handled by NextAuth
         window.location.href = "/dashboard"
       }
-    } catch (err) {
+    } catch {
       setError("Something went wrong")
     } finally {
       setIsLoading(false)
@@ -118,7 +119,7 @@ export function LoginForm({
                 </Button>
               </div>
               <div className="text-center text-sm">
-                Don't have an account?{" "}
+                Don&lsquo;t have an account?{" "}
                 <a href="/signup" className="underline underline-offset-4">
                   Sign up
                 </a>
@@ -126,9 +127,11 @@ export function LoginForm({
             </div>
           </form>
           <div className="bg-muted relative hidden md:block">
-            <img
+            <Image
               src="/placeholder.svg"
               alt="Image"
+              width={400}
+              height={400}
               className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
             />
           </div>

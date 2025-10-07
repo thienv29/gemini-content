@@ -24,7 +24,12 @@ declare module "next-auth" {
   }
 }
 
-export async function getTenantId(session: any) {
+export async function getTenantId(session: {
+  user?: {
+    id?: string
+    activeTenantId?: string
+  }
+} | null | undefined) {
   "use server"
 
   if (!session?.user?.id) {
@@ -112,7 +117,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     })
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       // For OAuth providers, ensure user has a default tenant
       if (account?.provider !== 'credentials' && user?.id) {
         try {

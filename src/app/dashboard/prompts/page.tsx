@@ -1,13 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Plus, Edit, Trash, Search } from "lucide-react"
+import axios from "axios"
+import { Plus, Edit, Trash } from "lucide-react"
 import { SearchInput } from "@/components/ui/search-input"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
 import { MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 
 
 interface Prompt {
@@ -15,7 +17,7 @@ interface Prompt {
   name: string
   description?: string
   content: string
-  variables: Record<string, any>
+  variables: Record<string, unknown>
   createdAt: string
   groups: Array<{
     group: {
@@ -45,6 +47,11 @@ export default function PromptsPage() {
     totalPages: 1
   })
 
+  // Delete confirmation states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [promptToDelete, setPromptToDelete] = useState<Prompt | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
   const columns: ColumnDef<Prompt>[] = [
     {
       accessorKey: "name",
@@ -72,7 +79,7 @@ export default function PromptsPage() {
       accessorKey: "variables",
       header: "Variables",
       cell: ({ row }) => {
-        const variables = row.getValue("variables") as Record<string, any>
+        const variables = row.getValue("variables") as Record<string, unknown>
         return <span>{Object.keys(variables).length}</span>
       }
     },
@@ -103,9 +110,10 @@ export default function PromptsPage() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"
-                onClick={() => handleDelete(prompt.id)}
+                onClick={() => handleDelete(prompt)}
               >
                 <Trash className="h-4 w-4" />
+                Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -114,42 +122,46 @@ export default function PromptsPage() {
     }
   ]
 
-  useEffect(() => {
-    fetchPrompts()
-  }, [search, page, limit])
-
-  const fetchPrompts = async () => {
+  const fetchPrompts = useCallback(async () => {
     try {
       const params = new URLSearchParams({
         search,
         page: page.toString(),
         limit: limit.toString()
       })
-      const response = await fetch(`/api/prompts?${params}`)
-      if (response.ok) {
-        const data = await response.json()
-        setPrompts(data.data)
-        setPagination(data.pagination)
-      }
+      const response = await axios.get(`/api/prompts?${params}`)
+      const data = response.data
+      setPrompts(data.data)
+      setPagination(data.pagination)
     } catch (error) {
       console.error('Error fetching prompts:', error)
     } finally {
       setLoading(false)
     }
+  }, [search, page, limit])
+
+  useEffect(() => {
+    fetchPrompts()
+  }, [fetchPrompts])
+
+  const handleDelete = (prompt: Prompt) => {
+    setPromptToDelete(prompt)
+    setDeleteDialogOpen(true)
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this prompt?')) {
-      try {
-        const response = await fetch(`/api/prompts/${id}`, {
-          method: 'DELETE'
-        })
-        if (response.ok) {
-          fetchPrompts() // Refresh data
-        }
-      } catch (error) {
-        console.error('Error deleting prompt:', error)
-      }
+  const handleConfirmDelete = async () => {
+    if (!promptToDelete) return
+
+    setDeleteLoading(true)
+    try {
+      await axios.delete(`/api/prompts/${promptToDelete.id}`)
+      fetchPrompts() // Refresh data
+      setDeleteDialogOpen(false)
+      setPromptToDelete(null)
+    } catch (error) {
+      console.error('Error deleting prompt:', error)
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -217,6 +229,17 @@ export default function PromptsPage() {
           totalPages={pagination.totalPages}
           currentPage={page}
           onPageChange={handlePageChange}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete Prompt"
+          description={`This will permanently delete the prompt "${promptToDelete?.name}". This action cannot be undone.`}
+          variant="destructive"
+          loading={deleteLoading}
+          onConfirm={handleConfirmDelete}
         />
       </div>
     </div>

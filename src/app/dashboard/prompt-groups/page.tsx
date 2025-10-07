@@ -1,13 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
+import axios from "axios"
 import { Plus, Edit, Trash } from "lucide-react"
 import { SearchInput } from "@/components/ui/search-input"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
 import { MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
+import { PromptGroupForm } from "@/components/prompt-group-form"
 
 
 interface PromptGroup {
@@ -45,6 +48,15 @@ export default function PromptGroupsPage() {
     total: 0,
     totalPages: 1
   })
+
+  // Form states
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingGroup, setEditingGroup] = useState<PromptGroup | null>(null)
+
+  // Delete confirmation states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [groupToDelete, setGroupToDelete] = useState<PromptGroup | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const columns: ColumnDef<PromptGroup>[] = [
     {
@@ -102,14 +114,16 @@ export default function PromptGroupsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleEdit(group)}>
                 <Edit className="h-4 w-4" />
+                Edit
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"
-                onClick={() => handleDelete(group.id)}
+                onClick={() => handleDelete(group)}
               >
                 <Trash className="h-4 w-4" />
+                Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -118,44 +132,50 @@ export default function PromptGroupsPage() {
     }
   ]
 
-  useEffect(() => {
-    fetchPromptGroups()
-  }, [search, page, limit])
-
-  const fetchPromptGroups = async () => {
+  const fetchPromptGroups = useCallback(async () => {
     try {
       const params = new URLSearchParams({
         search,
         page: page.toString(),
         limit: limit.toString()
       })
-      const response = await fetch(`/api/prompt-groups?${params}`)
-      if (response.ok) {
-        const data = await response.json()
-        setPromptGroups(data.data)
-        setPagination(data.pagination)
-      }
+      const response = await axios.get(`/api/prompt-groups?${params}`)
+      const data = response.data
+      setPromptGroups(data.data)
+      setPagination(data.pagination)
     } catch (error) {
       console.error('Error fetching prompt groups:', error)
     } finally {
       setLoading(false)
     }
+  }, [search, page, limit])
+
+  useEffect(() => {
+    fetchPromptGroups()
+  }, [fetchPromptGroups])
+
+  const handleDelete = (group: PromptGroup) => {
+    setGroupToDelete(group)
+    setDeleteDialogOpen(true)
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this prompt group?')) {
-      try {
-        const response = await fetch(`/api/prompt-groups/${id}`, {
-          method: 'DELETE'
-        })
-        if (response.ok) {
-          fetchPromptGroups() // Refresh data
-        }
-      } catch (error) {
-        console.error('Error deleting prompt group:', error)
-      }
+  const handleConfirmDelete = async () => {
+    if (!groupToDelete) return
+
+    setDeleteLoading(true)
+    try {
+      await axios.delete(`/api/prompt-groups/${groupToDelete.id}`)
+      fetchPromptGroups() // Refresh data
+      setDeleteDialogOpen(false)
+      setGroupToDelete(null)
+    } catch (error) {
+      console.error('Error deleting prompt group:', error)
+    } finally {
+      setDeleteLoading(false)
     }
   }
+
+
 
   const handleSearchChange = (value: string) => {
     setSearch(value)
@@ -171,6 +191,25 @@ export default function PromptGroupsPage() {
     setPage(newPage)
   }
 
+  const handleCreate = () => {
+    setEditingGroup(null)
+    setDialogOpen(true)
+  }
+
+  const handleEdit = (group: PromptGroup) => {
+    setEditingGroup(group)
+    setDialogOpen(true)
+  }
+
+  const handleFormSuccess = () => {
+    fetchPromptGroups() // Refresh data
+  }
+
+  const handleDialogClose = () => {
+    setDialogOpen(false)
+    setEditingGroup(null)
+  }
+
 
 
   if (loading) {
@@ -184,8 +223,9 @@ export default function PromptGroupsPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Prompt Groups</h2>
-          <Button>
+          <Button onClick={handleCreate}>
             <Plus className="h-4 w-4" />
+            Create Group
           </Button>
         </div>
 
@@ -221,6 +261,25 @@ export default function PromptGroupsPage() {
           totalPages={pagination.totalPages}
           currentPage={page}
           onPageChange={handlePageChange}
+        />
+
+        {/* Prompt Group Form Dialog */}
+        <PromptGroupForm
+          open={dialogOpen}
+          onClose={handleDialogClose}
+          editingGroup={editingGroup}
+          onSuccess={handleFormSuccess}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete Prompt Group"
+          description={`This will permanently delete the prompt group "${groupToDelete?.name}". This action cannot be undone.`}
+          variant="destructive"
+          loading={deleteLoading}
+          onConfirm={handleConfirmDelete}
         />
       </div>
     </div>

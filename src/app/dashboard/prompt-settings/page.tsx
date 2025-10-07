@@ -1,20 +1,22 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
+import axios from "axios"
 import { Plus, Edit, Trash } from "lucide-react"
 import { SearchInput } from "@/components/ui/search-input"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
 import { MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 
 
 interface PromptSetting {
   id: string
   name: string
   description?: string
-  items: Record<string, any>
+  items: Record<string, unknown>
   createdAt: string
 }
 
@@ -38,6 +40,11 @@ export default function PromptSettingsPage() {
     totalPages: 1
   })
 
+  // Delete confirmation states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [settingToDelete, setSettingToDelete] = useState<PromptSetting | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
   const columns: ColumnDef<PromptSetting>[] = [
     {
       accessorKey: "name",
@@ -57,7 +64,7 @@ export default function PromptSettingsPage() {
       accessorKey: "items",
       header: "Config Items",
       cell: ({ row }) => {
-        const items = row.getValue("items") as Record<string, any>
+        const items = row.getValue("items") as Record<string, unknown>
         const keys = Object.keys(items)
         return <span className="text-sm">
           {keys.length} item{keys.length !== 1 ? 's' : ''}: {keys.slice(0, 2).join(", ")}{keys.length > 2 && ` +${keys.length - 2} more`}
@@ -91,9 +98,10 @@ export default function PromptSettingsPage() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"
-                onClick={() => handleDelete(setting.id)}
+                onClick={() => handleDelete(setting)}
               >
                 <Trash className="h-4 w-4" />
+                Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -102,42 +110,46 @@ export default function PromptSettingsPage() {
     }
   ]
 
-  useEffect(() => {
-    fetchPromptSettings()
-  }, [search, page, limit])
-
-  const fetchPromptSettings = async () => {
+  const fetchPromptSettings = useCallback(async () => {
     try {
       const params = new URLSearchParams({
         search,
         page: page.toString(),
         limit: limit.toString()
       })
-      const response = await fetch(`/api/prompt-settings?${params}`)
-      if (response.ok) {
-        const data = await response.json()
-        setPromptSettings(data.data)
-        setPagination(data.pagination)
-      }
+      const response = await axios.get(`/api/prompt-settings?${params}`)
+      const data = response.data
+      setPromptSettings(data.data)
+      setPagination(data.pagination)
     } catch (error) {
       console.error('Error fetching prompt settings:', error)
     } finally {
       setLoading(false)
     }
+  }, [search, page, limit])
+
+  useEffect(() => {
+    fetchPromptSettings()
+  }, [fetchPromptSettings])
+
+  const handleDelete = (setting: PromptSetting) => {
+    setSettingToDelete(setting)
+    setDeleteDialogOpen(true)
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this prompt setting?')) {
-      try {
-        const response = await fetch(`/api/prompt-settings/${id}`, {
-          method: 'DELETE'
-        })
-        if (response.ok) {
-          fetchPromptSettings() // Refresh data
-        }
-      } catch (error) {
-        console.error('Error deleting prompt setting:', error)
-      }
+  const handleConfirmDelete = async () => {
+    if (!settingToDelete) return
+
+    setDeleteLoading(true)
+    try {
+      await axios.delete(`/api/prompt-settings/${settingToDelete.id}`)
+      fetchPromptSettings() // Refresh data
+      setDeleteDialogOpen(false)
+      setSettingToDelete(null)
+    } catch (error) {
+      console.error('Error deleting prompt setting:', error)
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -205,6 +217,17 @@ export default function PromptSettingsPage() {
           totalPages={pagination.totalPages}
           currentPage={page}
           onPageChange={handlePageChange}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete Prompt Setting"
+          description={`This will permanently delete the prompt setting "${settingToDelete?.name}". This action cannot be undone.`}
+          variant="destructive"
+          loading={deleteLoading}
+          onConfirm={handleConfirmDelete}
         />
       </div>
     </div>

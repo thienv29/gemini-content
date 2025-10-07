@@ -1,7 +1,5 @@
-import { auth } from "./lib/auth"
 import { NextResponse, NextRequest } from "next/server"
-import { prisma } from "./lib/prisma"
-import { JWT, getToken } from "next-auth/jwt"
+import { getToken } from "next-auth/jwt"
 
 export async function middleware(request: NextRequest) {
   console.log('Middleware triggered for:', request.nextUrl.pathname)

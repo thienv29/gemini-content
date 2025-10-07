@@ -2,10 +2,8 @@
 
 import * as React from "react"
 import {
-  AudioWaveform,
   BookOpen,
   Bot,
-  Command,
   Frame,
   GalleryVerticalEnd,
   Map,
@@ -27,7 +25,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { useAuthStore } from "@/stores/auth-store"
-import { prisma } from "@/lib/prisma"
+import axios from "axios"
 
 const data = {
   navMain: [
@@ -168,8 +166,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       // Fetch user's tenants
       const fetchUserTenants = async () => {
         try {
-          const userTenants = await fetch(`/api/user-tenants?userId=${user.id}`)
-          const data = await userTenants.json()
+          const response = await axios.get(`/api/user-tenants?userId=${user.id}`)
+          const data = response.data
           const teamsData = data.map((ut: { tenant: { name: string }, role: string, tenantId: string }) => ({
             name: ut.tenant.name,
             logo: GalleryVerticalEnd, // Can customize based on tenant
