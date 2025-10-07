@@ -6,6 +6,7 @@ import axios from "axios"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Loader2 } from "lucide-react"
 
@@ -14,6 +15,13 @@ interface PromptFormData {
   description: string
   content: string
   variables: Record<string, unknown>
+  groups: string[]
+}
+
+interface PromptGroup {
+  id: string
+  name: string
+  description?: string
 }
 
 interface Prompt {
@@ -22,6 +30,12 @@ interface Prompt {
   description?: string
   content: string
   variables: Record<string, unknown>
+  groups: Array<{
+    group: {
+      id: string
+      name: string
+    }
+  }>
 }
 
 interface PromptFormProps {
@@ -36,10 +50,19 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
     name: editingPrompt?.name || "",
     description: editingPrompt?.description || "",
     content: editingPrompt?.content || "",
-    variables: editingPrompt?.variables || {}
+    variables: editingPrompt?.variables || {},
+    groups: editingPrompt?.groups.map(g => g.group.id) || []
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [availableGroups, setAvailableGroups] = useState<PromptGroup[]>([])
+  const [groupSearch, setGroupSearch] = useState("")
+
+  // Filter groups based on search
+  const filteredGroups = availableGroups.filter(group =>
+    group.name.toLowerCase().includes(groupSearch.toLowerCase()) ||
+    (group.description && group.description.toLowerCase().includes(groupSearch.toLowerCase()))
+  )
 
   // Update form data when editingPrompt changes
   useEffect(() => {
@@ -47,9 +70,25 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
       name: editingPrompt?.name || "",
       description: editingPrompt?.description || "",
       content: editingPrompt?.content || "",
-      variables: editingPrompt?.variables || {}
+      variables: editingPrompt?.variables || {},
+      groups: editingPrompt?.groups.map(g => g.group.id) || []
     })
   }, [editingPrompt])
+
+  // Fetch available groups
+  useEffect(() => {
+    if (open) {
+      const fetchGroups = async () => {
+        try {
+          const response = await axios.get('/api/prompt-groups')
+          setAvailableGroups(response.data.data)
+        } catch (err) {
+          console.error('Failed to fetch groups:', err)
+        }
+      }
+      fetchGroups()
+    }
+  }, [open])
 
   const handleChange = (field: keyof PromptFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -62,6 +101,15 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
     } catch (e) {
       // Invalid JSON, keep the current variables
     }
+  }
+
+  const handleGroupChange = (groupId: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      groups: checked
+        ? [...prev.groups, groupId]
+        : prev.groups.filter(id => id !== groupId)
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,7 +128,7 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
       onClose()
 
       // Reset form
-      setFormData({ name: "", description: "", content: "", variables: {} })
+      setFormData({ name: "", description: "", content: "", variables: {}, groups: [] })
     } catch (err) {
       let message = "An error occurred"
       if (axios.isAxiosError(err)) {
@@ -96,14 +144,14 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
 
   const handleDialogClose = (open: boolean) => {
     if (!open) {
-      setFormData({ name: "", description: "", content: "", variables: {} })
+      setFormData({ name: "", description: "", content: "", variables: {}, groups: [] })
       setError("")
       onClose()
     }
   }
 
   const handleCancel = () => {
-    setFormData({ name: "", description: "", content: "", variables: {} })
+    setFormData({ name: "", description: "", content: "", variables: {}, groups: [] })
     setError("")
     onClose()
   }
@@ -122,58 +170,100 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="Enter prompt name"
-                className="col-span-3"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="description" className="text-right pt-2">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => handleChange('description', e.target.value)}
-                placeholder="Enter prompt description (optional)"
-                className="col-span-3"
-                rows={2}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="content" className="text-right pt-2">Content</Label>
-              <Textarea
-                id="content"
-                value={formData.content}
-                onChange={(e) => handleChange('content', e.target.value)}
-                placeholder="Enter prompt content"
-                className="col-span-3"
-                rows={8}
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="variables" className="text-right pt-2">Variables</Label>
-              <Textarea
-                id="variables"
-                value={JSON.stringify(formData.variables, null, 2)}
-                onChange={(e) => handleVariablesChange(e.target.value)}
-                placeholder='{"key": "default_value"}'
-                className="col-span-3"
-                rows={4}
-              />
-            </div>
-            {error && (
-              <div className="text-sm text-destructive text-center col-span-4">
-                {error}
+          <div className="flex gap-6 py-4">
+            {/* Left Column - Main Form Fields */}
+            <div className="flex-1 space-y-4">
+              <div>
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  placeholder="Enter prompt name"
+                  required
+                />
               </div>
-            )}
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleChange('description', e.target.value)}
+                  placeholder="Enter prompt description (optional)"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <Label htmlFor="content">Content</Label>
+                <Textarea
+                  id="content"
+                  value={formData.content}
+                  onChange={(e) => handleChange('content', e.target.value)}
+                  placeholder="Enter prompt content"
+                  rows={12}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="variables">Variables</Label>
+                <Textarea
+                  id="variables"
+                  value={JSON.stringify(formData.variables, null, 2)}
+                  onChange={(e) => handleVariablesChange(e.target.value)}
+                  placeholder='{"key": "default_value"}'
+                  rows={6}
+                />
+              </div>
+            </div>
+
+            {/* Right Column - Groups Selection */}
+            <div className="flex-1 space-y-4">
+              <div>
+                <Label>Groups</Label>
+                <div className="space-y-3 mt-2">
+                  <Input
+                    placeholder="Search groups..."
+                    value={groupSearch}
+                    onChange={(e) => setGroupSearch(e.target.value)}
+                    className="h-9"
+                  />
+                  <div className="border rounded-md p-3 max-h-96 overflow-y-auto bg-background">
+                    <div className="space-y-2">
+                      {filteredGroups.map((group) => (
+                        <div key={group.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`group-${group.id}`}
+                            checked={formData.groups.includes(group.id)}
+                            onCheckedChange={(checked) => handleGroupChange(group.id, checked as boolean)}
+                          />
+                          <Label htmlFor={`group-${group.id}`} className="text-sm flex-1">
+                            {group.name}
+                            {group.description && (
+                              <span className="text-muted-foreground ml-2">
+                                - {group.description}
+                              </span>
+                            )}
+                          </Label>
+                        </div>
+                      ))}
+                      {filteredGroups.length === 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          {availableGroups.length === 0 ? "No groups available" : "No groups match your search"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="text-sm text-destructive text-center py-4">
+              {error}
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleCancel}>

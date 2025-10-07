@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     const tenantId = await getTenantId(request)
 
     const body = await request.json()
-    const { name, description, content, variables } = body
+    const { name, description, content, variables, groups } = body
 
     if (!name || !content) {
       return NextResponse.json({ error: 'Name and content are required' }, { status: 400 })
@@ -88,7 +88,12 @@ export async function POST(request: NextRequest) {
         description,
         content,
         variables: variables || {},
-        tenantId
+        tenantId,
+        groups: groups && groups.length > 0 ? {
+          create: groups.map((groupId: string) => ({
+            groupId
+          }))
+        } : undefined
       },
       include: {
         groups: {
@@ -102,6 +107,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(prompt, { status: 201 })
   } catch (error) {
     console.error('Error creating prompt:', error)
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
