@@ -218,7 +218,7 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
 
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
-      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-auto flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{editingPrompt ? 'Edit Prompt' : 'Create Prompt'}</DialogTitle>
           <DialogDescription>
