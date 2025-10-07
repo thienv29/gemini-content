@@ -11,6 +11,7 @@ import { MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { Loading } from "@/components/ui/loading"
+import { PromptForm } from "@/components/prompt-form"
 
 
 interface Prompt {
@@ -52,6 +53,10 @@ export default function PromptsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [promptToDelete, setPromptToDelete] = useState<Prompt | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+
+  // Form states
+  const [formDialogOpen, setFormDialogOpen] = useState(false)
+  const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null)
 
   const columns: ColumnDef<Prompt>[] = [
     {
@@ -106,8 +111,9 @@ export default function PromptsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleEdit(prompt)}>
                 <Edit className="h-4 w-4" />
+                Edit
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"
@@ -166,6 +172,22 @@ export default function PromptsPage() {
     }
   }
 
+  const handleCreate = () => {
+    setEditingPrompt(null)
+    setFormDialogOpen(true)
+  }
+
+  const handleEdit = (prompt: Prompt) => {
+    setEditingPrompt(prompt)
+    setFormDialogOpen(true)
+  }
+
+  const handleFormSuccess = () => {
+    setFormDialogOpen(false)
+    setEditingPrompt(null)
+    fetchPrompts() // Refresh data
+  }
+
   const handleSearchChange = (value: string) => {
     setSearch(value)
     setPage(1) // Reset to first page when searching
@@ -193,8 +215,9 @@ export default function PromptsPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Prompts</h2>
-          <Button>
+          <Button onClick={handleCreate}>
             <Plus className="h-4 w-4" />
+            Create Prompt
           </Button>
         </div>
 
@@ -241,6 +264,14 @@ export default function PromptsPage() {
           variant="destructive"
           loading={deleteLoading}
           onConfirm={handleConfirmDelete}
+        />
+
+        {/* Prompt Form Dialog */}
+        <PromptForm
+          open={formDialogOpen}
+          onClose={() => setFormDialogOpen(false)}
+          editingPrompt={editingPrompt}
+          onSuccess={handleFormSuccess}
         />
       </div>
     </div>
