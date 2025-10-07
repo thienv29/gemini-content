@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import axios from "axios"
 import { Input } from "@/components/ui/input"
@@ -34,6 +34,14 @@ export function PromptGroupForm({ open, onClose, editingGroup, onSuccess }: Prom
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  // Update form data when editingGroup changes
+  useEffect(() => {
+    setFormData({
+      name: editingGroup?.name || "",
+      description: editingGroup?.description || ""
+    })
+  }, [editingGroup])
 
   const handleChange = (field: keyof PromptGroupFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -69,14 +77,22 @@ export function PromptGroupForm({ open, onClose, editingGroup, onSuccess }: Prom
     }
   }
 
-  const handleClose = () => {
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      setFormData({ name: "", description: "" })
+      setError("")
+      onClose()
+    }
+  }
+
+  const handleCancel = () => {
     setFormData({ name: "", description: "" })
     setError("")
     onClose()
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{editingGroup ? 'Edit Prompt Group' : 'Create Prompt Group'}</DialogTitle>
@@ -120,7 +136,7 @@ export function PromptGroupForm({ open, onClose, editingGroup, onSuccess }: Prom
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>

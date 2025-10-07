@@ -9,7 +9,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
 import { MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
+import { useConfirmation } from "@/core/providers/confirmation-provider"
 import { PromptGroupForm } from "@/components/prompt-group-form"
 import { useDebounce } from "@/hooks/use-debounce"
 import { Spinner } from "@/components/ui/spinner"
@@ -57,10 +57,9 @@ export default function PromptGroupsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingGroup, setEditingGroup] = useState<PromptGroup | null>(null)
 
-  // Delete confirmation states
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [groupToDelete, setGroupToDelete] = useState<PromptGroup | null>(null)
+  // Delete confirmation state
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const { confirm } = useConfirmation()
 
   const columns: ColumnDef<PromptGroup>[] = [
     {
@@ -165,24 +164,23 @@ export default function PromptGroupsPage() {
   }, [debouncedSearch])
 
   const handleDelete = (group: PromptGroup) => {
-    setGroupToDelete(group)
-    setDeleteDialogOpen(true)
-  }
-
-  const handleConfirmDelete = async () => {
-    if (!groupToDelete) return
-
-    setDeleteLoading(true)
-    try {
-      await axios.delete(`/api/prompt-groups/${groupToDelete.id}`)
-      fetchPromptGroups() // Refresh data
-      setDeleteDialogOpen(false)
-      setGroupToDelete(null)
-    } catch (error) {
-      console.error('Error deleting prompt group:', error)
-    } finally {
-      setDeleteLoading(false)
-    }
+    confirm({
+      title: "Delete Prompt Group",
+      description: `This will permanently delete the prompt group "${group.name}". This action cannot be undone.`,
+      variant: "destructive",
+      loading: deleteLoading,
+      onConfirm: async () => {
+        setDeleteLoading(true)
+        try {
+          await axios.delete(`/api/prompt-groups/${group.id}`)
+          fetchPromptGroups() // Refresh data
+        } catch (error) {
+          console.error('Error deleting prompt group:', error)
+        } finally {
+          setDeleteLoading(false)
+        }
+      }
+    })
   }
 
 
@@ -285,16 +283,7 @@ export default function PromptGroupsPage() {
           onSuccess={handleFormSuccess}
         />
 
-        {/* Delete Confirmation Dialog */}
-        <ConfirmationDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          title="Delete Prompt Group"
-          description={`This will permanently delete the prompt group "${groupToDelete?.name}". This action cannot be undone.`}
-          variant="destructive"
-          loading={deleteLoading}
-          onConfirm={handleConfirmDelete}
-        />
+
       </div>
     </div>
   )
