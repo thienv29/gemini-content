@@ -67,6 +67,9 @@ model Tenant {
   updatedAt DateTime @updatedAt
 
   userTenants UserTenant[]
+  prompts     Prompt[]
+  promptGroups PromptGroup[]
+  promptSettings PromptSetting[]
 }
 
 model UserTenant {
@@ -80,4 +83,49 @@ model UserTenant {
 
   @@unique([userId, tenantId])
   @@map("user_tenant")
+}
+
+model Prompt {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  content     String
+  variables   Json
+  tenantId    String
+  tenant      Tenant                @relation(fields: [tenantId], references: [id])
+  groups      PromptGroupMapping[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PromptGroup {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  tenantId    String
+  tenant      Tenant                @relation(fields: [tenantId], references: [id])
+  prompts     PromptGroupMapping[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PromptGroupMapping {
+  id       String   @id @default(uuid())
+  promptId String
+  groupId  String
+  prompt   Prompt   @relation(fields: [promptId], references: [id])
+  group    PromptGroup @relation(fields: [groupId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PromptSetting {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  tenantId    String
+  tenant      Tenant                @relation(fields: [tenantId], references: [id])
+  items       Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
