@@ -42,7 +42,6 @@ export default function PromptSettingsPage() {
     totalPages: 1
   })
 
-  // Delete confirmation
   const { confirm } = useConfirmation()
 
   // Form states
@@ -143,12 +142,8 @@ export default function PromptSettingsPage() {
       description: `This will permanently delete the prompt setting "${setting.name}". This action cannot be undone.`,
       variant: "destructive",
       onConfirm: async () => {
-        try {
-          await axios.delete(`/api/prompt-settings/${setting.id}`)
-          fetchPromptSettings() // Refresh data
-        } catch (error) {
-          console.error('Error deleting prompt setting:', error)
-        }
+        await axios.delete(`/api/prompt-settings/${setting.id}`)
+        fetchPromptSettings() // Refresh data
       }
     })
   }

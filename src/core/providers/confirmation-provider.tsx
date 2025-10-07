@@ -9,7 +9,6 @@ export interface ConfirmationOptions {
   confirmText?: string
   cancelText?: string
   variant?: 'default' | 'destructive'
-  loading?: boolean
   onConfirm: () => void | Promise<void>
 }
 
@@ -29,6 +28,7 @@ export function useConfirmation() {
 
 export function ConfirmationProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isConfirming, setIsConfirming] = useState(false)
   const [config, setConfig] = useState<ConfirmationOptions | null>(null)
 
   const confirm = (options: ConfirmationOptions) => {
@@ -37,13 +37,16 @@ export function ConfirmationProvider({ children }: { children: React.ReactNode }
   }
 
   const handleConfirm = async () => {
-    if (config) {
+    if (config && !isConfirming) {
+      setIsConfirming(true)
       try {
         await config.onConfirm()
         setIsOpen(false)
         setConfig(null)
       } catch (error) {
         console.error('Confirmation action failed:', error)
+      } finally {
+        setIsConfirming(false)
       }
     }
   }
@@ -52,6 +55,7 @@ export function ConfirmationProvider({ children }: { children: React.ReactNode }
     if (!open) {
       setIsOpen(false)
       setConfig(null)
+      setIsConfirming(false)
     }
   }
 
@@ -63,6 +67,7 @@ export function ConfirmationProvider({ children }: { children: React.ReactNode }
           open={isOpen}
           onOpenChange={handleCancel}
           {...config}
+          loading={isConfirming}
           onConfirm={handleConfirm}
         />
       )}
