@@ -1,33 +1,14 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { ThemeSwitcher } from "@/components/ui/shadcn-io/theme-switcher"
-import { useAuthStore } from "@/stores/auth-store"
-import { PlusCircle, Edit, Trash2, Settings } from 'lucide-react'
+import { Plus, Edit, Trash } from "lucide-react"
+import { SearchInput } from "@/components/ui/search-input"
+import { ColumnDef } from "@tanstack/react-table"
+import { DataTable } from "@/components/ui/data-table"
+import { MoreHorizontal } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
 
 interface PromptSetting {
   id: string
@@ -35,31 +16,108 @@ interface PromptSetting {
   description?: string
   items: Record<string, any>
   createdAt: string
-  updatedAt: string
+}
+
+interface PaginationData {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
 }
 
 export default function PromptSettingsPage() {
-  const { user } = useAuthStore()
-  const [settings, setSettings] = useState<PromptSetting[]>([])
+  const [promptSettings, setPromptSettings] = useState<PromptSetting[]>([])
   const [loading, setLoading] = useState(true)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingSetting, setEditingSetting] = useState<PromptSetting | null>(null)
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    items: '{}'
+  const [search, setSearch] = useState("")
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
+  const [pagination, setPagination] = useState<PaginationData>({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1
   })
 
-  useEffect(() => {
-    fetchSettings()
-  }, [])
+  const columns: ColumnDef<PromptSetting>[] = [
+    {
+      accessorKey: "name",
+      header: "Name",
+    },
+    {
+      accessorKey: "description",
+      header: "Description",
+      cell: ({ row }) => {
+        const description = row.getValue("description") as string
+        return <span className="text-sm text-muted-foreground">
+          {description?.length > 50 ? `${description.substring(0, 50)}...` : description}
+        </span>
+      }
+    },
+    {
+      accessorKey: "items",
+      header: "Config Items",
+      cell: ({ row }) => {
+        const items = row.getValue("items") as Record<string, any>
+        const keys = Object.keys(items)
+        return <span className="text-sm">
+          {keys.length} item{keys.length !== 1 ? 's' : ''}: {keys.slice(0, 2).join(", ")}{keys.length > 2 && ` +${keys.length - 2} more`}
+        </span>
+      }
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Created",
+      cell: ({ row }) => {
+        const date = new Date(row.getValue("createdAt"))
+        return <span className="text-sm">{date.toLocaleDateString()}</span>
+      }
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const setting = row.original
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <Edit className="h-4 w-4" />
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => handleDelete(setting.id)}
+              >
+                <Trash className="h-4 w-4" />
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      }
+    }
+  ]
 
-  const fetchSettings = async () => {
+  useEffect(() => {
+    fetchPromptSettings()
+  }, [search, page, limit])
+
+  const fetchPromptSettings = async () => {
     try {
-      const response = await fetch('/api/prompt-settings')
+      const params = new URLSearchParams({
+        search,
+        page: page.toString(),
+        limit: limit.toString()
+      })
+      const response = await fetch(`/api/prompt-settings?${params}`)
       if (response.ok) {
         const data = await response.json()
-        setSettings(data)
+        setPromptSettings(data.data)
+        setPagination(data.pagination)
       }
     } catch (error) {
       console.error('Error fetching prompt settings:', error)
@@ -68,231 +126,87 @@ export default function PromptSettingsPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    try {
-      let items = {}
-      try {
-        items = JSON.parse(formData.items)
-      } catch (err) {
-        alert('Invalid JSON in items field')
-        return
-      }
-
-      const payload = {
-        name: formData.name,
-        description: formData.description,
-        items
-      }
-
-      let response
-      if (editingSetting) {
-        response = await fetch(`/api/prompt-settings/${editingSetting.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-      } else {
-        response = await fetch('/api/prompt-settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-      }
-
-      if (response.ok) {
-        await fetchSettings()
-        resetForm()
-        setDialogOpen(false)
-      } else {
-        const error = await response.json()
-        alert(error.error || 'An error occurred')
-      }
-    } catch (error) {
-      console.error('Error saving prompt setting:', error)
-      alert('An error occurred while saving the prompt setting')
-    }
-  }
-
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this prompt setting?')) return
-
-    try {
-      const response = await fetch(`/api/prompt-settings/${id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        await fetchSettings()
-      } else {
-        alert('Error deleting prompt setting')
+    if (confirm('Are you sure you want to delete this prompt setting?')) {
+      try {
+        const response = await fetch(`/api/prompt-settings/${id}`, {
+          method: 'DELETE'
+        })
+        if (response.ok) {
+          fetchPromptSettings() // Refresh data
+        }
+      } catch (error) {
+        console.error('Error deleting prompt setting:', error)
       }
-    } catch (error) {
-      console.error('Error deleting prompt setting:', error)
-      alert('An error occurred while deleting the prompt setting')
     }
   }
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      items: '{}'
-    })
-    setEditingSetting(null)
+  const handleSearchChange = (value: string) => {
+    setSearch(value)
+    setPage(1) // Reset to first page when searching
   }
 
-  const openEditDialog = (setting: PromptSetting) => {
-    setEditingSetting(setting)
-    setFormData({
-      name: setting.name,
-      description: setting.description || '',
-      items: JSON.stringify(setting.items, null, 2)
-    })
-    setDialogOpen(true)
+  const handleLimitChange = (newLimit: string) => {
+    setLimit(parseInt(newLimit))
+    setPage(1) // Reset to first page when changing limit
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage)
+  }
+
+
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">Loading prompt settings...</div>
+    )
   }
 
   return (
-    <>
-      <header className="flex justify-between px-4 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-        <div className="flex items-center gap-2">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mr-2 data-[orientation=vertical]:h-4"
-          />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="/dashboard">
-                  Dashboard
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Prompt Settings</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-        <div className="flex items-center gap-2">
-          <ThemeSwitcher className="scale-110" />
-        </div>
-      </header>
-      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+      <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Prompt Settings</h2>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => {
-                resetForm()
-                setDialogOpen(true)
-              }}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Setting
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                  <DialogTitle>{editingSetting ? 'Edit Prompt Setting' : 'Add New Prompt Setting'}</DialogTitle>
-                  <DialogDescription>
-                    {editingSetting ? 'Update the setting details below.' : 'Create a new prompt setting for your workspace.'}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                      Name
-                    </Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="col-span-3"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="description" className="text-right">
-                      Description
-                    </Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="col-span-3"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-start gap-4">
-                    <Label htmlFor="items" className="text-right pt-2">
-                      Items
-                    </Label>
-                    <Textarea
-                      id="items"
-                      value={formData.items}
-                      onChange={(e) => setFormData({ ...formData, items: e.target.value })}
-                      className="col-span-3"
-                      rows={6}
-                      placeholder='{"setting1": "value1", "setting2": {"nested": "value"}, "arraySetting": ["item1", "item2"]}'
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit">
-                    {editingSetting ? 'Update Setting' : 'Create Setting'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button>
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
 
-        {loading ? (
-          <div className="text-center">Loading prompt settings...</div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {settings.map((setting) => (
-              <Card key={setting.id}>
-                <CardHeader>
-                  <CardTitle className="flex justify-between items-start">
-                    <span className="truncate">{setting.name}</span>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(setting)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(setting.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardTitle>
-                  <CardDescription>{setting.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm text-muted-foreground">
-                    <div className="flex items-center mb-2">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>{Object.keys(setting.items).length} setting{Object.keys(setting.items).length !== 1 ? 's' : ''}</span>
-                    </div>
-                    <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-24">
-                      {JSON.stringify(setting.items, null, 2)}
-                    </pre>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        {/* Search and Filters */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <SearchInput
+              value={search}
+              onChange={handleSearchChange}
+              placeholder="Search settings..."
+              className="w-80"
+            />
           </div>
-        )}
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-muted-foreground">Show:</span>
+            <select
+              value={limit}
+              onChange={(e) => handleLimitChange(e.target.value)}
+              className="px-2 py-1 border rounded"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Data Table */}
+        <DataTable
+          columns={columns}
+          data={promptSettings}
+          totalPages={pagination.totalPages}
+          currentPage={page}
+          onPageChange={handlePageChange}
+        />
       </div>
-    </>
+    </div>
   )
 }

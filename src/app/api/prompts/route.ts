@@ -5,9 +5,32 @@ import { getTenantId } from '@/lib/tenant'
 export async function GET(request: NextRequest) {
   try {
     const tenantId = await getTenantId(request)
+    const { searchParams } = new URL(request.url)
 
+    // Pagination params
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const offset = (page - 1) * limit
+
+    // Search params
+    const search = searchParams.get('search') || ''
+
+    // Build where clause
+    const where: any = { tenantId }
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { content: { contains: search, mode: 'insensitive' } }
+      ]
+    }
+
+    // Get total count for pagination
+    const total = await prisma.prompt.count({ where })
+
+    // Get paginated results
     const prompts = await prisma.prompt.findMany({
-      where: { tenantId },
+      where,
       include: {
         groups: {
           include: {
@@ -15,10 +38,20 @@ export async function GET(request: NextRequest) {
           }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      skip: offset,
+      take: limit
     })
 
-    return NextResponse.json(prompts)
+    return NextResponse.json({
+      data: prompts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    })
   } catch (error) {
     console.error('Error fetching prompts:', error)
     if (error instanceof Error) {

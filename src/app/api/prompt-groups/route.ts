@@ -7,9 +7,31 @@ import { getTenantId } from '@/lib/tenant'
 export async function GET(request: NextRequest) {
   try {
     const tenantId = await getTenantId(request)
+    const { searchParams } = new URL(request.url)
 
+    // Pagination params
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const offset = (page - 1) * limit
+
+    // Search params
+    const search = searchParams.get('search') || ''
+
+    // Build where clause
+    const where: any = { tenantId }
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ]
+    }
+
+    // Get total count for pagination
+    const total = await prisma.promptGroup.count({ where })
+
+    // Get paginated results
     const promptGroups = await prisma.promptGroup.findMany({
-      where: { tenantId },
+      where,
       include: {
         prompts: {
           include: {
@@ -20,10 +42,20 @@ export async function GET(request: NextRequest) {
           select: { prompts: true }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      skip: offset,
+      take: limit
     })
 
-    return NextResponse.json(promptGroups)
+    return NextResponse.json({
+      data: promptGroups,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    })
   } catch (error) {
     console.error('Error fetching prompt groups:', error)
     if (error instanceof Error) {
