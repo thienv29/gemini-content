@@ -11,6 +11,8 @@ import { MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { PromptGroupForm } from "@/components/prompt-group-form"
+import { useDebounce } from "@/hooks/use-debounce"
+import { Spinner } from "@/components/ui/spinner"
 
 
 interface PromptGroup {
@@ -40,6 +42,7 @@ export default function PromptGroupsPage() {
   const [promptGroups, setPromptGroups] = useState<PromptGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
+  const debouncedSearch = useDebounce(search, 500) // Debounce search by 500ms
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10)
   const [pagination, setPagination] = useState<PaginationData>({
@@ -133,9 +136,10 @@ export default function PromptGroupsPage() {
   ]
 
   const fetchPromptGroups = useCallback(async () => {
+    setLoading(true) // Set loading to true when fetching
     try {
       const params = new URLSearchParams({
-        search,
+        search: debouncedSearch,
         page: page.toString(),
         limit: limit.toString()
       })
@@ -148,11 +152,16 @@ export default function PromptGroupsPage() {
     } finally {
       setLoading(false)
     }
-  }, [search, page, limit])
+  }, [debouncedSearch, page, limit])
 
   useEffect(() => {
     fetchPromptGroups()
   }, [fetchPromptGroups])
+
+  // Reset page to 1 when debounced search changes
+  useEffect(() => {
+    if (page !== 1) setPage(1)
+  }, [debouncedSearch])
 
   const handleDelete = (group: PromptGroup) => {
     setGroupToDelete(group)
@@ -179,7 +188,6 @@ export default function PromptGroupsPage() {
 
   const handleSearchChange = (value: string) => {
     setSearch(value)
-    setPage(1) // Reset to first page when searching
   }
 
   const handleLimitChange = (newLimit: string) => {
@@ -212,7 +220,7 @@ export default function PromptGroupsPage() {
 
 
 
-  if (loading) {
+  if (loading && promptGroups.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">Loading prompt groups...</div>
     )
@@ -255,13 +263,20 @@ export default function PromptGroupsPage() {
         </div>
 
         {/* Data Table */}
-        <DataTable
-          columns={columns}
-          data={promptGroups}
-          totalPages={pagination.totalPages}
-          currentPage={page}
-          onPageChange={handlePageChange}
-        />
+        <div className="relative">
+          <DataTable
+            columns={columns}
+            data={promptGroups}
+            totalPages={pagination.totalPages}
+            currentPage={page}
+            onPageChange={handlePageChange}
+          />
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+              <Spinner size={24} />
+            </div>
+          )}
+        </div>
 
         {/* Prompt Group Form Dialog */}
         <PromptGroupForm

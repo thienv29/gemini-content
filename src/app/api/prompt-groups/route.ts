@@ -18,23 +18,22 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
 
     // Build where clause
-    const where: {
-      tenantId: string
-      OR?: Array<{
-        name?: { contains: string; mode: string }
-        description?: { contains: string; mode: string }
-      }>
-    } = { tenantId }
+    const where: any = { tenantId }
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
+        { name: { contains: search } },
+        { description: { contains: search } },
+        { prompts: { some: { prompt: { name: { contains: search } } } } }
       ]
     }
 
-    // Get total count for pagination
-    const total = await prisma.promptGroup.count({ where })
+    // Get total count for pagination (using findMany since count doesn't support 'mode' and nested relations)
+    const allMatching = await prisma.promptGroup.findMany({
+      where,
+      select: { id: true }
+    })
+    const total = allMatching.length
 
     // Get paginated results
     const promptGroups = await prisma.promptGroup.findMany({
