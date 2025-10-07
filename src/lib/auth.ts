@@ -89,7 +89,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      // For OAuth providers, ensure user has a default tenant if none exists
+      // For OAuth providers, ensure user has a default tenant
       if (account?.provider !== 'credentials' && user?.id) {
         try {
           const dbUser = await prisma.user.findUnique({
@@ -102,7 +102,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           })
           if (dbUser) {
             if (dbUser.userTenants.length === 0) {
-              // Create default tenant for new user
               const defaultTenant = await prisma.tenant.create({
                 data: {
                   name: `${dbUser.name || 'User'}'s Workspace`,
@@ -128,8 +127,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
           }
         } catch (error) {
-          console.error('Error in signIn tenant creation:', error)
-          return false // Deny access if tenant creation fails
+          console.error('Error in signIn for OAuth:', error)
+          return false
         }
       }
       return true
@@ -155,6 +154,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.activeTenantId = token.activeTenantId as string
       }
       return session
+    }
+  },
+  events: {
+    async createUser({ user }) {
+      try {
+        const defaultTenant = await prisma.tenant.create({
+          data: {
+            name: `${user.name || 'User'}'s Workspace`,
+          },
+        })
+
+        await prisma.userTenant.create({
+          data: {
+            userId: user.id as string,
+            tenantId: defaultTenant.id,
+            role: 'admin',
+          },
+        })
+
+        await prisma.user.update({
+          where: { id: user.id as string },
+          data: { activeTenantId: defaultTenant.id },
+        })
+
+        console.log('Updated user activeTenantId')
+      } catch (error) {
+        console.error('Error creating default tenant for new user:', error)
+      }
     }
   },
   pages: {
