@@ -9,9 +9,9 @@ import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
 import { MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { Loading } from "@/components/ui/loading"
 import { PromptForm } from "@/components/prompt-form"
+import { useConfirmation } from "@/core/providers/confirmation-provider"
 
 
 interface Prompt {
@@ -49,14 +49,13 @@ export default function PromptsPage() {
     totalPages: 1
   })
 
-  // Delete confirmation states
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [promptToDelete, setPromptToDelete] = useState<Prompt | null>(null)
-  const [deleteLoading, setDeleteLoading] = useState(false)
-
   // Form states
   const [formDialogOpen, setFormDialogOpen] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null)
+
+  // Delete confirmation state
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const { confirm } = useConfirmation()
 
   const columns: ColumnDef<Prompt>[] = [
     {
@@ -152,24 +151,23 @@ export default function PromptsPage() {
   }, [fetchPrompts])
 
   const handleDelete = (prompt: Prompt) => {
-    setPromptToDelete(prompt)
-    setDeleteDialogOpen(true)
-  }
-
-  const handleConfirmDelete = async () => {
-    if (!promptToDelete) return
-
-    setDeleteLoading(true)
-    try {
-      await axios.delete(`/api/prompts/${promptToDelete.id}`)
-      fetchPrompts() // Refresh data
-      setDeleteDialogOpen(false)
-      setPromptToDelete(null)
-    } catch (error) {
-      console.error('Error deleting prompt:', error)
-    } finally {
-      setDeleteLoading(false)
-    }
+    confirm({
+      title: "Delete Prompt",
+      description: `This will permanently delete the prompt "${prompt.name}". This action cannot be undone.`,
+      variant: "destructive",
+      loading: deleteLoading,
+      onConfirm: async () => {
+        setDeleteLoading(true)
+        try {
+          await axios.delete(`/api/prompts/${prompt.id}`)
+          fetchPrompts() // Refresh data
+        } catch (error) {
+          console.error('Error deleting prompt:', error)
+        } finally {
+          setDeleteLoading(false)
+        }
+      }
+    })
   }
 
   const handleCreate = () => {
@@ -253,17 +251,6 @@ export default function PromptsPage() {
           totalPages={pagination.totalPages}
           currentPage={page}
           onPageChange={handlePageChange}
-        />
-
-        {/* Delete Confirmation Dialog */}
-        <ConfirmationDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          title="Delete Prompt"
-          description={`This will permanently delete the prompt "${promptToDelete?.name}". This action cannot be undone.`}
-          variant="destructive"
-          loading={deleteLoading}
-          onConfirm={handleConfirmDelete}
         />
 
         {/* Prompt Form Dialog */}
