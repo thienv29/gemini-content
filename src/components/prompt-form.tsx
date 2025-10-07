@@ -158,8 +158,8 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
 
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{editingPrompt ? 'Edit Prompt' : 'Create Prompt'}</DialogTitle>
           <DialogDescription>
             {editingPrompt
@@ -169,65 +169,72 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
-          <div className="flex gap-6 py-4">
-            {/* Left Column - Main Form Fields */}
-            <div className="flex-1 space-y-4">
-              <div>
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleChange('name', e.target.value)}
-                  placeholder="Enter prompt name"
-                  required
-                />
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          {/* Main Content Area with Two Columns */}
+          <div className="flex gap-6 flex-1 min-h-0 py-4">
+            {/* Left Column - Content (Primary Editing Area) */}
+            <div className="flex-1 flex flex-col">
+              <Label htmlFor="content" className="mb-2">Prompt Content</Label>
+              <Textarea
+                id="content"
+                value={formData.content}
+                onChange={(e) => handleChange('content', e.target.value)}
+                placeholder="Enter your prompt content here..."
+                className="flex-1 min-h-[400px] resize-none"
+                required
+              />
+            </div>
+
+            {/* Right Column - Secondary Fields */}
+            <div className="flex-1 space-y-4 overflow-hidden flex flex-col">
+              {/* Name and Description at top */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => handleChange('name', e.target.value)}
+                    placeholder="Enter prompt name"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => handleChange('description', e.target.value)}
+                    placeholder="Enter brief description (optional)"
+                    rows={3}
+                    className="resize-none"
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => handleChange('description', e.target.value)}
-                  placeholder="Enter prompt description (optional)"
-                  rows={2}
-                />
-              </div>
-              <div>
-                <Label htmlFor="content">Content</Label>
-                <Textarea
-                  id="content"
-                  value={formData.content}
-                  onChange={(e) => handleChange('content', e.target.value)}
-                  placeholder="Enter prompt content"
-                  rows={12}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="variables">Variables</Label>
+
+              {/* Variables */}
+              <div className="flex-1 flex flex-col min-h-0">
+                <Label htmlFor="variables" className="mb-2">Variables</Label>
                 <Textarea
                   id="variables"
                   value={JSON.stringify(formData.variables, null, 2)}
                   onChange={(e) => handleVariablesChange(e.target.value)}
                   placeholder='{"key": "default_value"}'
-                  rows={6}
+                  className="flex-1 min-h-[120px] resize-none"
                 />
               </div>
-            </div>
 
-            {/* Right Column - Groups Selection */}
-            <div className="flex-1 space-y-4">
-              <div>
-                <Label>Groups</Label>
-                <div className="space-y-3 mt-2">
+              {/* Groups Section */}
+              <div className="flex-1 flex flex-col min-h-0">
+                <Label className="mb-2">Groups</Label>
+                <div className="flex-1 flex flex-col min-h-0 space-y-2">
                   <Input
                     placeholder="Search groups..."
                     value={groupSearch}
                     onChange={(e) => setGroupSearch(e.target.value)}
-                    className="h-9"
+                    className="h-9 flex-shrink-0"
                   />
-                  <div className="border rounded-md p-3 max-h-96 overflow-y-auto bg-background">
+                  <div className="flex-1 border rounded-md p-3 overflow-y-auto bg-background min-h-0">
                     <div className="space-y-2">
                       {filteredGroups.map((group) => (
                         <div key={group.id} className="flex items-center space-x-2">
@@ -260,12 +267,12 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
 
           {/* Error Message */}
           {error && (
-            <div className="text-sm text-destructive text-center py-4">
+            <div className="text-sm text-destructive text-center py-2 flex-shrink-0">
               {error}
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0">
             <Button type="button" variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
