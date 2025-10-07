@@ -10,6 +10,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
+import { Loading } from "@/components/ui/loading"
 
 
 interface Prompt {
@@ -181,9 +182,9 @@ export default function PromptsPage() {
 
 
 
-  if (loading) {
+  if (loading && prompts.length === 0) {
     return (
-      <div className="flex justify-center items-center h-64">Loading prompts...</div>
+      <Loading/>  
     )
   }
 

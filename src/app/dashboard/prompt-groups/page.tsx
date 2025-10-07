@@ -13,6 +13,7 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { PromptGroupForm } from "@/components/prompt-group-form"
 import { useDebounce } from "@/hooks/use-debounce"
 import { Spinner } from "@/components/ui/spinner"
+import { Loading } from "@/components/ui/loading"
 
 
 interface PromptGroup {
@@ -218,11 +219,9 @@ export default function PromptGroupsPage() {
     setEditingGroup(null)
   }
 
-
-
   if (loading && promptGroups.length === 0) {
     return (
-      <div className="flex justify-center items-center h-64">Loading prompt groups...</div>
+      <Loading/>  
     )
   }
 
