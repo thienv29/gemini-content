@@ -10,6 +10,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
+import { PromptSettingForm } from "@/components/prompt-setting-form"
 
 
 interface PromptSetting {
@@ -44,6 +45,10 @@ export default function PromptSettingsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [settingToDelete, setSettingToDelete] = useState<PromptSetting | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+
+  // Form states
+  const [formDialogOpen, setFormDialogOpen] = useState(false)
+  const [editingSetting, setEditingSetting] = useState<PromptSetting | null>(null)
 
   const columns: ColumnDef<PromptSetting>[] = [
     {
@@ -93,8 +98,9 @@ export default function PromptSettingsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleEdit(setting)}>
                 <Edit className="h-4 w-4" />
+                Edit
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"
@@ -167,7 +173,21 @@ export default function PromptSettingsPage() {
     setPage(newPage)
   }
 
+  const handleCreate = () => {
+    setEditingSetting(null)
+    setFormDialogOpen(true)
+  }
 
+  const handleEdit = (setting: PromptSetting) => {
+    setEditingSetting(setting)
+    setFormDialogOpen(true)
+  }
+
+  const handleFormSuccess = () => {
+    setFormDialogOpen(false)
+    setEditingSetting(null)
+    fetchPromptSettings()
+  }
 
   if (loading) {
     return (
@@ -180,8 +200,9 @@ export default function PromptSettingsPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Prompt Settings</h2>
-          <Button>
-            <Plus className="h-4 w-4" />
+          <Button onClick={handleCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Setting
           </Button>
         </div>
 
@@ -228,6 +249,14 @@ export default function PromptSettingsPage() {
           variant="destructive"
           loading={deleteLoading}
           onConfirm={handleConfirmDelete}
+        />
+
+        {/* Prompt Setting Form Dialog */}
+        <PromptSettingForm
+          open={formDialogOpen}
+          onClose={() => setFormDialogOpen(false)}
+          editingSetting={editingSetting}
+          onSuccess={handleFormSuccess}
         />
       </div>
     </div>
