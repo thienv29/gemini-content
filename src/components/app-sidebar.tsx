@@ -225,7 +225,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         {isLoaded ? (
-          <WorkspaceSwitcher workspaces={workspaces} onWorkspaceChange={fetchUserTenants} />
+          <WorkspaceSwitcher workspaces={workspaces}/>
         ) : (
           <div className="h-14 animate-pulse bg-sidebar-accent rounded-md mx-1" />
         )}

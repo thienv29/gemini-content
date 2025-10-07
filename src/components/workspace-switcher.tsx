@@ -26,6 +26,8 @@ import {
 import { useAuthStore } from "@/stores/auth-store"
 import { TenantForm } from "@/components/tenant-form"
 import { useConfirmation } from "@/core/providers/confirmation-provider"
+import { useSession } from "next-auth/react";
+
 
 
 interface Workspace {
@@ -46,10 +48,8 @@ interface Tenant {
 
 export function WorkspaceSwitcher({
   workspaces,
-  onWorkspaceChange,
 }: {
   workspaces: Workspace[]
-  onWorkspaceChange?: () => void
 }) {
   const { isMobile } = useSidebar()
   const { user } = useAuthStore()
@@ -58,7 +58,7 @@ export function WorkspaceSwitcher({
 
   const [tenantFormOpen, setTenantFormOpen] = useState(false)
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null)
-
+  const { data: session, update } = useSession()
   if (!activeWorkspace) {
     return null
   }
@@ -69,15 +69,15 @@ export function WorkspaceSwitcher({
     try {
       const response = await axios.patch('/api/user-tenants', { tenantId: workspaceId })
       console.log('API response:', response.data)
-
-      // Update user store immediately for instant UI feedback
-      if (user) {
-        user.activeTenantId = workspaceId
-      }
-
       // Session sẽ tự refresh on next API call,
       // mà chúng ta chỉ cần UI update ngay lập tức
-      onWorkspaceChange?.()
+      await update({
+        user: {
+          ...session?.user,
+          activeTenantId: workspaceId
+        },
+      });
+      window.location.reload();
     } catch (error) {
       console.error('Failed to switch workspace:', error)
     }
@@ -100,7 +100,7 @@ export function WorkspaceSwitcher({
         title: "Cannot delete workspace",
         description: "This workspace has only one user and cannot be deleted.",
         confirmText: "OK",
-        onConfirm: () => {}, // No action needed, just close the dialog
+        onConfirm: () => { }, // No action needed, just close the dialog
       })
       return
     }

@@ -162,7 +162,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return true
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger }) {
+      
+      
       // Always include activeTenantId in token, even if user obj doesn't have it
       if (user && user.id) {
         token.id = user.id
@@ -183,6 +185,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           } catch (error) {
             console.error('Error fetching tenant in JWT callback:', error)
           }
+        }
+      }
+
+      if (trigger === "update" && token.id) {
+        const updatedUser = await prisma.user.findUnique({
+          where: { id: token.id  as string },
+          select: { activeTenantId: true },
+        })
+        if (updatedUser) {
+          token.activeTenantId = updatedUser.activeTenantId
         }
       }
 
