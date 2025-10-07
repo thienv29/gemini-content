@@ -135,16 +135,22 @@ export async function DELETE(
   try {
     const tenantId = await getTenantId(request)
 
-    const prompt = await prisma.prompt.deleteMany({
+    // First, verify the prompt exists and belongs to the tenant
+    const existingPrompt = await prisma.prompt.findFirst({
       where: {
         id: params.id,
         tenantId
       }
     })
 
-    if (prompt.count === 0) {
+    if (!existingPrompt) {
       return NextResponse.json({ error: 'Prompt not found' }, { status: 404 })
     }
+
+    // Delete the prompt (this will cascade delete associated group mappings)
+    await prisma.prompt.delete({
+      where: { id: params.id }
+    })
 
     return NextResponse.json({ message: 'Prompt deleted successfully' })
   } catch (error) {

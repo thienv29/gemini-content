@@ -113,8 +113,8 @@ model PromptGroupMapping {
   id       String   @id @default(uuid())
   promptId String
   groupId  String
-  prompt   Prompt   @relation(fields: [promptId], references: [id])
-  group    PromptGroup @relation(fields: [groupId], references: [id])
+  prompt   Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  group    PromptGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
