@@ -7,12 +7,9 @@ import { Plus, Edit, Trash } from "lucide-react"
 import { SearchInput } from "@/components/ui/search-input"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
-import { MoreHorizontal } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useConfirmation } from "@/core/providers/confirmation-provider"
 import { PromptGroupForm } from "@/components/prompt-group-form"
 import { useDebounce } from "@/hooks/use-debounce"
-import { Spinner } from "@/components/ui/spinner"
 import { Loading } from "@/components/ui/loading"
 
 
@@ -57,11 +54,31 @@ export default function PromptGroupsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingGroup, setEditingGroup] = useState<PromptGroup | null>(null)
 
-  // Delete confirmation state
-  const [deleteLoading, setDeleteLoading] = useState(false)
+
   const { confirm } = useConfirmation()
 
   const columns: ColumnDef<PromptGroup>[] = [
+    {
+      id: "select",
+      header: () => (
+        <input
+          type="checkbox"
+          checked={promptGroups.length > 0 && selectedGroups.size === promptGroups.length}
+          onChange={(e) => handleSelectAll(e.target.checked)}
+        />
+      ),
+      cell: ({ row }) => {
+        const group = row.original
+        return (
+          <input
+            type="checkbox"
+            checked={selectedGroups.has(group.id)}
+            onChange={(e) => handleSelectGroup(group.id, e.target.checked)}
+          />
+        )
+      },
+      size: 50
+    },
     {
       accessorKey: "name",
       header: "Name",
@@ -105,33 +122,31 @@ export default function PromptGroupsPage() {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
         const group = row.original
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleEdit(group)}>
-                <Edit className="h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => handleDelete(group)}
-              >
-                <Trash className="h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex gap-1 justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleEdit(group)}
+              className="h-8 w-8 p-0"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDelete(group)}
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+            >
+              <Trash className="h-4 w-4" />
+            </Button>
+          </div>
         )
-      }
+      },
+      size: 100
     }
   ]
 
@@ -168,16 +183,12 @@ export default function PromptGroupsPage() {
       title: "Delete Prompt Group",
       description: `This will permanently delete the prompt group "${group.name}". This action cannot be undone.`,
       variant: "destructive",
-      loading: deleteLoading,
       onConfirm: async () => {
-        setDeleteLoading(true)
         try {
           await axios.delete(`/api/prompt-groups/${group.id}`)
           fetchPromptGroups() // Refresh data
         } catch (error) {
           console.error('Error deleting prompt group:', error)
-        } finally {
-          setDeleteLoading(false)
         }
       }
     })
@@ -217,9 +228,59 @@ export default function PromptGroupsPage() {
     setEditingGroup(null)
   }
 
+  // Selection state
+  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set())
+
+  const handleSelectGroup = (groupId: string, checked: boolean) => {
+    setSelectedGroups(prev => {
+      const newSet = new Set(prev)
+      if (checked) {
+        newSet.add(groupId)
+      } else {
+        newSet.delete(groupId)
+      }
+      return newSet
+    })
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedGroups(new Set(promptGroups.map(g => g.id)))
+    } else {
+      setSelectedGroups(new Set())
+    }
+  }
+
+  const handleBulkDelete = () => {
+    const selectedCount = selectedGroups.size
+    const selectedNames = promptGroups.filter(g => selectedGroups.has(g.id)).map(g => g.name).join(", ")
+
+    confirm({
+      title: `Delete ${selectedCount} Prompt Group${selectedCount > 1 ? 's' : ''}`,
+      description: `This will permanently delete the selected prompt groups: ${selectedNames}. This action cannot be undone.`,
+      variant: "destructive",
+      onConfirm: async () => {
+        try {
+          await Promise.all(
+            Array.from(selectedGroups).map(id => axios.delete(`/api/prompt-groups/${id}`))
+          )
+          setSelectedGroups(new Set()) // Clear selection
+          fetchPromptGroups() // Refresh data
+        } catch (error) {
+          console.error('Error deleting prompt groups:', error)
+        }
+      }
+    })
+  }
+
+  // Clear selections when data changes
+  useEffect(() => {
+    setSelectedGroups(new Set())
+  }, [promptGroups])
+
   if (loading && promptGroups.length === 0) {
     return (
-      <Loading/>  
+      <Loading className="top-16"/>
     )
   }
 
@@ -228,10 +289,22 @@ export default function PromptGroupsPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Prompt Groups</h2>
-          <Button onClick={handleCreate}>
-            <Plus className="h-4 w-4" />
-            Create Group
-          </Button>
+          <div className="flex gap-2">
+            {selectedGroups.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+              >
+                <Trash className="h-4 w-4 mr-2" />
+                Delete Selected ({selectedGroups.size})
+              </Button>
+            )}
+            <Button onClick={handleCreate}>
+              <Plus className="h-4 w-4" />
+              Create Group
+            </Button>
+          </div>
         </div>
 
         {/* Search and Filters */}
@@ -260,20 +333,13 @@ export default function PromptGroupsPage() {
         </div>
 
         {/* Data Table */}
-        <div className="relative">
-          <DataTable
-            columns={columns}
-            data={promptGroups}
-            totalPages={pagination.totalPages}
-            currentPage={page}
-            onPageChange={handlePageChange}
-          />
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
-              <Spinner scale={1.5} />
-            </div>
-          )}
-        </div>
+        <DataTable
+          columns={columns}
+          data={promptGroups}
+          totalPages={pagination.totalPages}
+          currentPage={page}
+          onPageChange={handlePageChange}
+        />
 
         {/* Prompt Group Form Dialog */}
         <PromptGroupForm

@@ -7,8 +7,7 @@ import { Plus, Edit, Trash } from "lucide-react"
 import { SearchInput } from "@/components/ui/search-input"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
-import { MoreHorizontal } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
 import { useConfirmation } from "@/core/providers/confirmation-provider"
 import { PromptSettingForm } from "@/components/prompt-setting-form"
 import { Loading } from "@/components/ui/loading"
@@ -48,7 +47,31 @@ export default function PromptSettingsPage() {
   const [formDialogOpen, setFormDialogOpen] = useState(false)
   const [editingSetting, setEditingSetting] = useState<PromptSetting | null>(null)
 
+  // Selection states
+  const [selectedSettings, setSelectedSettings] = useState<Set<string>>(new Set())
+
   const columns: ColumnDef<PromptSetting>[] = [
+    {
+      id: "select",
+      header: () => (
+        <input
+          type="checkbox"
+          checked={promptSettings.length > 0 && selectedSettings.size === promptSettings.length}
+          onChange={(e) => handleSelectAll(e.target.checked)}
+        />
+      ),
+      cell: ({ row }) => {
+        const setting = row.original
+        return (
+          <input
+            type="checkbox"
+            checked={selectedSettings.has(setting.id)}
+            onChange={(e) => handleSelectSetting(setting.id, e.target.checked)}
+          />
+        )
+      },
+      size: 50
+    },
     {
       accessorKey: "name",
       header: "Name",
@@ -84,33 +107,31 @@ export default function PromptSettingsPage() {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
         const setting = row.original
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleEdit(setting)}>
-                <Edit className="h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => handleDelete(setting)}
-              >
-                <Trash className="h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex gap-1 justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleEdit(setting)}
+              className="h-8 w-8 p-0"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDelete(setting)}
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+            >
+              <Trash className="h-4 w-4" />
+            </Button>
+          </div>
         )
-      }
+      },
+      size: 100
     }
   ]
 
@@ -178,9 +199,56 @@ export default function PromptSettingsPage() {
     fetchPromptSettings()
   }
 
+  const handleSelectSetting = (settingId: string, checked: boolean) => {
+    setSelectedSettings(prev => {
+      const newSet = new Set(prev)
+      if (checked) {
+        newSet.add(settingId)
+      } else {
+        newSet.delete(settingId)
+      }
+      return newSet
+    })
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedSettings(new Set(promptSettings.map(s => s.id)))
+    } else {
+      setSelectedSettings(new Set())
+    }
+  }
+
+  const handleBulkDelete = () => {
+    const selectedCount = selectedSettings.size
+    const selectedNames = promptSettings.filter(s => selectedSettings.has(s.id)).map(s => s.name).join(", ")
+
+    confirm({
+      title: `Delete ${selectedCount} Prompt Setting${selectedCount > 1 ? 's' : ''}`,
+      description: `This will permanently delete the selected prompt settings: ${selectedNames}. This action cannot be undone.`,
+      variant: "destructive",
+      onConfirm: async () => {
+        try {
+          await Promise.all(
+            Array.from(selectedSettings).map(id => axios.delete(`/api/prompt-settings/${id}`))
+          )
+          setSelectedSettings(new Set()) // Clear selection
+          fetchPromptSettings() // Refresh data
+        } catch (error) {
+          console.error('Error deleting prompt settings:', error)
+        }
+      }
+    })
+  }
+
+  // Clear selections when data changes
+  useEffect(() => {
+    setSelectedSettings(new Set())
+  }, [promptSettings])
+
   if (loading && promptSettings.length === 0) {
     return (
-      <Loading message="Loading prompt settings..." />
+      <Loading message="Loading prompt settings..." className="top-16" />
     )
   }
 
@@ -189,10 +257,22 @@ export default function PromptSettingsPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Prompt Settings</h2>
-          <Button onClick={handleCreate}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Setting
-          </Button>
+          <div className="flex gap-2">
+            {selectedSettings.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+              >
+                <Trash className="h-4 w-4 mr-2" />
+                Delete Selected ({selectedSettings.size})
+              </Button>
+            )}
+            <Button onClick={handleCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Setting
+            </Button>
+          </div>
         </div>
 
         {/* Search and Filters */}

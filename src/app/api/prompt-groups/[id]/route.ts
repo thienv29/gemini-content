@@ -6,14 +6,15 @@ import { getTenantId } from '@/lib/tenant'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = await getTenantId(request)
+    const { id } = await params
 
     const promptGroup = await prisma.promptGroup.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId
       },
       include: {
@@ -41,10 +42,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = await getTenantId(request)
+    const { id } = await params
 
     const body = await request.json()
     const { name, description } = body
@@ -55,7 +57,7 @@ export async function PUT(
 
     const promptGroup = await prisma.promptGroup.updateMany({
       where: {
-        id: params.id,
+        id,
         tenantId
       },
       data: {
@@ -70,7 +72,7 @@ export async function PUT(
 
     const updatedPromptGroup = await prisma.promptGroup.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId
       },
       include: {
@@ -99,14 +101,15 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = await getTenantId(request)
+    const { id } = await params
 
     const promptGroup = await prisma.promptGroup.deleteMany({
       where: {
-        id: params.id,
+        id,
         tenantId
       }
     })

@@ -5,14 +5,15 @@ import { getTenantId } from '@/lib/tenant'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = await getTenantId(request)
+    const { id } = await params
 
     const prompt = await prisma.prompt.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId
       },
       include: {
@@ -37,10 +38,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = await getTenantId(request)
+    const { id } = await params
 
     const body = await request.json()
     const { name, description, content, variables, groups } = body
@@ -52,7 +54,7 @@ export async function PUT(
     // Check if prompt exists and belongs to tenant
     const existingPrompt = await prisma.prompt.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId
       },
       include: {
@@ -66,7 +68,7 @@ export async function PUT(
 
     // Update prompt
     const updatedPrompt = await prisma.prompt.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name,
         description,
@@ -84,7 +86,7 @@ export async function PUT(
     for (const groupId of toRemove) {
       await prisma.promptGroupMapping.deleteMany({
         where: {
-          promptId: params.id,
+          promptId: id,
           groupId
         }
       })
@@ -95,7 +97,7 @@ export async function PUT(
     for (const groupId of toAdd) {
       await prisma.promptGroupMapping.create({
         data: {
-          promptId: params.id,
+          promptId: id,
           groupId
         }
       })
@@ -104,7 +106,7 @@ export async function PUT(
     // Fetch updated prompt with groups
     const result = await prisma.prompt.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId
       },
       include: {
@@ -130,15 +132,16 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const tenantId = await getTenantId(request)
+    const { id } = await params
 
     // First, verify the prompt exists and belongs to the tenant
     const existingPrompt = await prisma.prompt.findFirst({
       where: {
-        id: params.id,
+        id,
         tenantId
       }
     })
@@ -149,7 +152,7 @@ export async function DELETE(
 
     // Delete the prompt (this will cascade delete associated group mappings)
     await prisma.prompt.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({ message: 'Prompt deleted successfully' })

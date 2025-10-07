@@ -7,8 +7,7 @@ import { Plus, Edit, Trash } from "lucide-react"
 import { SearchInput } from "@/components/ui/search-input"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
-import { MoreHorizontal } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
 import { Loading } from "@/components/ui/loading"
 import { PromptForm } from "@/components/prompt-form"
 import { useConfirmation } from "@/core/providers/confirmation-provider"
@@ -53,11 +52,33 @@ export default function PromptsPage() {
   const [formDialogOpen, setFormDialogOpen] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null)
 
-  // Delete confirmation state
-  const [deleteLoading, setDeleteLoading] = useState(false)
+  // Selection states
+  const [selectedPrompts, setSelectedPrompts] = useState<Set<string>>(new Set())
+
   const { confirm } = useConfirmation()
 
   const columns: ColumnDef<Prompt>[] = [
+    {
+      id: "select",
+      header: () => (
+        <input
+          type="checkbox"
+          checked={prompts.length > 0 && selectedPrompts.size === prompts.length}
+          onChange={(e) => handleSelectAll(e.target.checked)}
+        />
+      ),
+      cell: ({ row }) => {
+        const prompt = row.original
+        return (
+          <input
+            type="checkbox"
+            checked={selectedPrompts.has(prompt.id)}
+            onChange={(e) => handleSelectPrompt(prompt.id, e.target.checked)}
+          />
+        )
+      },
+      size: 50
+    },
     {
       accessorKey: "name",
       header: "Name",
@@ -98,33 +119,31 @@ export default function PromptsPage() {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
         const prompt = row.original
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleEdit(prompt)}>
-                <Edit className="h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => handleDelete(prompt)}
-              >
-                <Trash className="h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex gap-1 justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleEdit(prompt)}
+              className="h-8 w-8 p-0"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDelete(prompt)}
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+            >
+              <Trash className="h-4 w-4" />
+            </Button>
+          </div>
         )
-      }
+      },
+      size: 100
     }
   ]
 
@@ -150,21 +169,22 @@ export default function PromptsPage() {
     fetchPrompts()
   }, [fetchPrompts])
 
+  // Clear selections when data changes (pagination, search, etc.)
+  useEffect(() => {
+    setSelectedPrompts(new Set())
+  }, [prompts])
+
   const handleDelete = (prompt: Prompt) => {
     confirm({
       title: "Delete Prompt",
       description: `This will permanently delete the prompt "${prompt.name}". This action cannot be undone.`,
       variant: "destructive",
-      loading: deleteLoading,
       onConfirm: async () => {
-        setDeleteLoading(true)
         try {
           await axios.delete(`/api/prompts/${prompt.id}`)
           fetchPrompts() // Refresh data
         } catch (error) {
           console.error('Error deleting prompt:', error)
-        } finally {
-          setDeleteLoading(false)
         }
       }
     })
@@ -200,11 +220,53 @@ export default function PromptsPage() {
     setPage(newPage)
   }
 
+  const handleSelectPrompt = (promptId: string, checked: boolean) => {
+    setSelectedPrompts(prev => {
+      const newSet = new Set(prev)
+      if (checked) {
+        newSet.add(promptId)
+      } else {
+        newSet.delete(promptId)
+      }
+      return newSet
+    })
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedPrompts(new Set(prompts.map(p => p.id)))
+    } else {
+      setSelectedPrompts(new Set())
+    }
+  }
+
+  const handleBulkDelete = () => {
+    const selectedCount = selectedPrompts.size
+    const selectedNames = prompts.filter(p => selectedPrompts.has(p.id)).map(p => p.name).join(", ")
+
+    confirm({
+      title: `Delete ${selectedCount} Prompt${selectedCount > 1 ? 's' : ''}`,
+      description: `This will permanently delete the selected prompts: ${selectedNames}. This action cannot be undone.`,
+      variant: "destructive",
+      onConfirm: async () => {
+        try {
+          await Promise.all(
+            Array.from(selectedPrompts).map(id => axios.delete(`/api/prompts/${id}`))
+          )
+          setSelectedPrompts(new Set()) // Clear selection
+          fetchPrompts() // Refresh data
+        } catch (error) {
+          console.error('Error deleting prompts:', error)
+        }
+      }
+    })
+  }
+
 
 
   if (loading && prompts.length === 0) {
     return (
-      <Loading/>  
+      <Loading className="top-16"/>
     )
   }
 
@@ -213,10 +275,22 @@ export default function PromptsPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Prompts</h2>
-          <Button onClick={handleCreate}>
-            <Plus className="h-4 w-4" />
-            Create Prompt
-          </Button>
+          <div className="flex gap-2">
+            {selectedPrompts.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+              >
+                <Trash className="h-4 w-4 mr-2" />
+                Delete Selected ({selectedPrompts.size})
+              </Button>
+            )}
+            <Button onClick={handleCreate}>
+              <Plus className="h-4 w-4" />
+              Create Prompt
+            </Button>
+          </div>
         </div>
 
         {/* Search and Filters */}
