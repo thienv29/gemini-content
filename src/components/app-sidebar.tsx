@@ -25,26 +25,10 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { useAuthStore } from "@/stores/auth-store"
+import { prisma } from "@/lib/prisma"
 
-// This is sample data.
 const data = {
-  teams: [
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
   navMain: [
     {
       title: "Playground",
@@ -151,28 +135,52 @@ const data = {
   ],
 }
 
-interface User {
-  id?: string
-  name?: string | null
-  email?: string | null
-  image?: string | null
-}
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { user } = useAuthStore()
+  const [teams, setTeams] = React.useState<Array<{
+    name: string
+    logo: React.ElementType
+    plan: string
+    id: string
+  }>>([])
 
-export function AppSidebar({
-  user,
-  ...props
-}: React.ComponentProps<typeof Sidebar> & { user: User }) {
+  React.useEffect(() => {
+    if (user?.id) {
+      // Fetch user's tenants
+      const fetchUserTenants = async () => {
+        try {
+          const userTenants = await fetch(`/api/user-tenants?userId=${user.id}`)
+          const data = await userTenants.json()
+          const teamsData = data.map((ut: { tenant: { name: string }, role: string, tenantId: string }) => ({
+            name: ut.tenant.name,
+            logo: GalleryVerticalEnd, // Can customize based on tenant
+            plan: ut.role === 'admin' ? 'Admin' : 'Member', // Simple mapping
+            id: ut.tenantId
+          }))
+          setTeams(teamsData)
+        } catch (error) {
+          console.error('Error fetching user tenants:', error)
+        }
+      }
+      fetchUserTenants()
+    }
+  }, [user?.id])
+
+  if (!user) {
+    return null // Or some loading state
+  }
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher teams={teams} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} />
+        <NavUser />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

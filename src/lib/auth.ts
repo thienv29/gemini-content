@@ -10,12 +10,17 @@ declare module "next-auth" {
     user: {
       id?: string
       provider?: string
+      activeTenantId?: string
     } & DefaultSession["user"]
   }
   interface JWT {
     id?: string
     provider?: string
     providerAccountId?: string
+    activeTenantId?: string
+  }
+  interface User {
+    activeTenantId?: string
   }
 }
 
@@ -46,6 +51,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const user = await prisma.user.findUnique({
           where: {
             email
+          },
+          include: {
+            userTenants: {
+              include: {
+                tenant: true
+              }
+            }
           }
         })
 
@@ -59,20 +71,74 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
+        // Use activeTenantId from user, or first tenant if not set
+        let activeTenantId = user.activeTenantId
+        if (!activeTenantId && user.userTenants.length > 0) {
+          activeTenantId = user.userTenants[0].tenantId
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           image: user.image,
+          activeTenantId: activeTenantId || undefined
         }
       }
     })
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // For OAuth providers, ensure user has a default tenant if none exists
+      if (account?.provider !== 'credentials' && user?.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            include: {
+              userTenants: {
+                include: { tenant: true }
+              }
+            }
+          })
+          if (dbUser) {
+            if (dbUser.userTenants.length === 0) {
+              // Create default tenant for new user
+              const defaultTenant = await prisma.tenant.create({
+                data: {
+                  name: `${dbUser.name || 'User'}'s Workspace`,
+                },
+              })
+
+              await prisma.userTenant.create({
+                data: {
+                  userId: dbUser.id,
+                  tenantId: defaultTenant.id,
+                  role: 'admin',
+                },
+              })
+
+              await prisma.user.update({
+                where: { id: dbUser.id },
+                data: { activeTenantId: defaultTenant.id },
+              })
+
+              user.activeTenantId = defaultTenant.id
+            } else {
+              user.activeTenantId = dbUser.activeTenantId || dbUser.userTenants[0].tenantId
+            }
+          }
+        } catch (error) {
+          console.error('Error in signIn tenant creation:', error)
+          return false // Deny access if tenant creation fails
+        }
+      }
+      return true
+    },
     async jwt({ token, user, account }) {
       // Thêm user data vào JWT token để tránh DB calls khi auth()
       if (user) {
         token.id = user.id
+        token.activeTenantId = user.activeTenantId
       }
       if (account) {
         token.provider = account.provider
@@ -86,6 +152,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token) {
         session.user.id = token.id as string
         session.user.provider = token.provider as string
+        session.user.activeTenantId = token.activeTenantId as string
       }
       return session
     }

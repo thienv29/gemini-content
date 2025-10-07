@@ -33,14 +33,35 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-      }
+    // Create default tenant and user in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const defaultTenant = await tx.tenant.create({
+        data: {
+          name: `${name}'s Workspace`,
+        },
+      })
+
+      const user = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          activeTenantId: defaultTenant.id,
+        }
+      })
+
+      await tx.userTenant.create({
+        data: {
+          userId: user.id,
+          tenantId: defaultTenant.id,
+          role: 'admin',
+        },
+      })
+
+      return user
     })
+
+    const user = result
 
     // Return user without password
     return NextResponse.json({

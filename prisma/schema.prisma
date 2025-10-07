@@ -17,10 +17,12 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
+  activeTenantId String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   accounts      Account[]
   sessions      Session[]
+  userTenants   UserTenant[]
 }
 
 model Account {
@@ -56,4 +58,26 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userTenants UserTenant[]
+}
+
+model UserTenant {
+  id       String @id @default(cuid())
+  userId   String @map("user_id")
+  tenantId String @map("tenant_id")
+  role     String @default("member") // admin, member, etc.
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@map("user_tenant")
 }

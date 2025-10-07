@@ -30,20 +30,18 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useAuthStore } from "@/stores/auth-store"
 
-export function NavUser({
-  user,
-}: {
-  user: {
-    name?: string | null
-    email?: string | null
-    image?: string | null
-  }
-}) {
+export function NavUser() {
   const { isMobile } = useSidebar()
+  const { user } = useAuthStore()
 
   const handleSignOut = async () => {
     await signOut({ redirect: true, redirectTo: "/login" })
+  }
+
+  if (!user) {
+    return null // Or some loading state
   }
 
   return (
