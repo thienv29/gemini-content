@@ -12,6 +12,7 @@ import {
   PieChart,
   Settings2,
   SquareTerminal,
+  FileText,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -30,6 +31,25 @@ import { prisma } from "@/lib/prisma"
 
 const data = {
   navMain: [
+    {
+      title: "Prompts",
+      url: "#",
+      icon: FileText,
+      items: [
+        {
+          title: "All Prompts",
+          url: "/dashboard/prompts",
+        },
+        {
+          title: "Groups",
+          url: "/dashboard/prompt-groups",
+        },
+        {
+          title: "Settings",
+          url: "/dashboard/prompt-settings",
+        },
+      ],
+    },
     {
       title: "Playground",
       url: "#",

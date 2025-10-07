@@ -24,6 +24,30 @@ declare module "next-auth" {
   }
 }
 
+export async function getTenantId(session: any) {
+  "use server"
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized')
+  }
+
+  let tenantId = session.user.activeTenantId
+  if (!tenantId) {
+    // Try to get user's first tenant
+    const userTenants = await prisma.userTenant.findMany({
+      where: { userId: session.user.id },
+      include: { tenant: true },
+      take: 1
+    })
+    if (userTenants.length === 0) {
+      throw new Error('No tenant found')
+    }
+    tenantId = userTenants[0].tenantId
+  }
+
+  return tenantId
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: {
@@ -134,16 +158,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return true
     },
     async jwt({ token, user, account }) {
-      // Thêm user data vào JWT token để tránh DB calls khi auth()
-      if (user) {
+      // Always include activeTenantId in token, even if user obj doesn't have it
+      if (user && user.id) {
         token.id = user.id
-        token.activeTenantId = user.activeTenantId
+        // Ensure tenant ID is always in token for performance
+        if (user.activeTenantId) {
+          token.activeTenantId = user.activeTenantId
+        } else {
+          // Query DB to get tenant ID and cache it
+          try {
+            const userTenants = await prisma.userTenant.findMany({
+              where: { userId: user.id },
+              include: { tenant: true },
+              take: 1
+            })
+            if (userTenants.length > 0) {
+              token.activeTenantId = userTenants[0].tenantId
+            }
+          } catch (error) {
+            console.error('Error fetching tenant in JWT callback:', error)
+          }
+        }
       }
+
       if (account) {
         token.provider = account.provider
         token.providerAccountId = account.providerAccountId
-        // Chỉ store cần thiết, tránh bloated JWT
       }
+
       return token
     },
     async session({ session, token }) {
