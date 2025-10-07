@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Loader2 } from "lucide-react"
+import { Loader2, Plus, Trash } from "lucide-react"
 
 interface PromptFormData {
   name: string
@@ -156,6 +156,66 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
     onClose()
   }
 
+  // Variable management functions
+  const addVariable = () => {
+    const newVariables = { ...formData.variables, "": "" }
+    setFormData(prev => ({ ...prev, variables: newVariables }))
+  }
+
+  const removeVariable = (index: number) => {
+    const entries = Object.entries(formData.variables)
+    entries.splice(index, 1)
+    const newVariables = Object.fromEntries(entries)
+    setFormData(prev => ({ ...prev, variables: newVariables }))
+  }
+
+  const handleVariableKeyChange = (index: number, newKey: string) => {
+    const entries = Object.entries(formData.variables)
+    const [oldKey, value] = entries[index]
+
+    if (oldKey === newKey) return // No change needed
+
+    // Remove old key and add new key
+    const newEntries = entries.map(([key, val], i) =>
+      i === index ? [newKey, val] : [key, val]
+    ).filter(([key]) => key !== "") // Remove empty keys that might exist temporarily
+
+    const newVariables = Object.fromEntries(newEntries)
+    setFormData(prev => ({ ...prev, variables: newVariables }))
+  }
+
+  const handleVariableValueChange = (index: number, newValue: string) => {
+    const entries = Object.entries(formData.variables)
+    const [key] = entries[index]
+
+    const newEntries = entries.map(([k, v], i) =>
+      k === key ? [k, newValue] : [k, v]
+    )
+
+    const newVariables = Object.fromEntries(newEntries)
+    setFormData(prev => ({ ...prev, variables: newVariables }))
+  }
+
+  const insertVariableIntoContent = (variableText: string) => {
+    const textarea = document.getElementById('content') as HTMLTextAreaElement
+    if (textarea) {
+      const startPos = textarea.selectionStart
+      const endPos = textarea.selectionEnd
+      const beforeText = formData.content.substring(0, startPos)
+      const afterText = formData.content.substring(endPos, formData.content.length)
+
+      const newContent = beforeText + variableText + afterText
+
+      setFormData(prev => ({ ...prev, content: newContent }))
+
+      // Set cursor position after the inserted text
+      setTimeout(() => {
+        textarea.focus()
+        textarea.setSelectionRange(startPos + variableText.length, startPos + variableText.length)
+      }, 0)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-hidden flex flex-col">
@@ -212,16 +272,66 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
                 </div>
               </div>
 
-              {/* Variables */}
+              {/* Variables Manager */}
               <div className="flex-1 flex flex-col min-h-0">
-                <Label htmlFor="variables" className="mb-2">Variables</Label>
-                <Textarea
-                  id="variables"
-                  value={JSON.stringify(formData.variables, null, 2)}
-                  onChange={(e) => handleVariablesChange(e.target.value)}
-                  placeholder='{"key": "default_value"}'
-                  className="flex-1 min-h-[120px] resize-none"
-                />
+                <Label className="mb-2">Variables</Label>
+                <div className="flex-1 flex flex-col min-h-0 space-y-2">
+                  {/* Variables List */}
+                  <div className="flex-1 border rounded-md p-3 overflow-y-auto bg-background min-h-[120px]">
+                    <div className="space-y-2">
+                      {Object.entries(formData.variables).map(([key, value], index) => (
+                        <div key={index} className="flex items-center gap-2 p-2 border rounded">
+                          <Input
+                            placeholder="Variable name"
+                            value={key}
+                            onChange={(e) => handleVariableKeyChange(index, e.target.value)}
+                            className="flex-1 h-8"
+                          />
+                          <Input
+                            placeholder="Default value"
+                            value={String(value)}
+                            onChange={(e) => handleVariableValueChange(index, e.target.value)}
+                            className="flex-1 h-8"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => insertVariableIntoContent(`{{${key}}}`)}
+                            className="h-8"
+                          >
+                            Add to Content
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => removeVariable(index)}
+                            className="h-8"
+                          >
+                            <Trash className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                      {Object.keys(formData.variables).length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No variables defined. Click "Add Variable" to create one.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Add Variable Button */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addVariable}
+                    className="w-full h-9"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add Variable
+                  </Button>
+                </div>
               </div>
 
               {/* Groups Section */}
