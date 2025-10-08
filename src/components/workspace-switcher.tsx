@@ -44,8 +44,10 @@ interface Tenant {
 
 export function WorkspaceSwitcher({
   workspaces,
+  onRefresh,
 }: {
   workspaces: Workspace[]
+  onRefresh?: () => void
 }) {
   const { isMobile } = useSidebar()
   const { user } = useAuthStore()
@@ -101,6 +103,7 @@ export function WorkspaceSwitcher({
       onConfirm: async () => {
         try {
           await axios.delete(`/api/tenants/${workspace.id}`)
+          onRefresh?.()
         } catch (error) {
           console.error('Failed to delete workspace:', error)
         }
@@ -112,6 +115,7 @@ export function WorkspaceSwitcher({
     setTenantFormOpen(false)
     setEditingTenant(null)
     setEditingWorkspace(null)
+    onRefresh?.()
   }
 
   const handleCreateTenant = () => {
