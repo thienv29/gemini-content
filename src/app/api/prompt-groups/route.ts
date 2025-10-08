@@ -39,11 +39,6 @@ export async function GET(request: NextRequest) {
     const promptGroups = await prisma.promptGroup.findMany({
       where,
       include: {
-        prompts: {
-          include: {
-            prompt: true
-          }
-        },
         _count: {
           select: { prompts: true }
         }

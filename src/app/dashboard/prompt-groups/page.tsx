@@ -18,12 +18,6 @@ interface PromptGroup {
   name: string
   description?: string
   createdAt: string
-  prompts: Array<{
-    prompt: {
-      id: string
-      name: string
-    }
-  }>
   _count: {
     prompts: number
   }
@@ -95,22 +89,10 @@ export default function PromptGroupsPage() {
       }
     },
     {
-      accessorKey: "_count.prompts",
       header: "Prompts Count",
       cell: ({ row }) => {
-        const count = row.getValue("_count.prompts") as number
+        const count = row.original._count?.prompts || 0
         return <span>{count}</span>
-      }
-    },
-    {
-      accessorKey: "prompts",
-      header: "Prompts",
-      cell: ({ row }) => {
-        const prompts = row.getValue("prompts") as PromptGroup["prompts"]
-        return <span className="text-sm">
-          {prompts.slice(0, 3).map(p => p.prompt.name).join(", ")}
-          {prompts.length > 3 && ` +${prompts.length - 3} more`}
-        </span>
       }
     },
     {
@@ -169,6 +151,7 @@ export default function PromptGroupsPage() {
       })
       const response = await axios.get(`/api/prompt-groups?${params}`)
       const data = response.data
+
       setPromptGroups(data.data)
       setPagination(data.pagination)
     } catch (error) {
