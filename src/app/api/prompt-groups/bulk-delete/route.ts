@@ -42,7 +42,8 @@ export async function POST(request: NextRequest) {
     return handleBulkDelete({
       table: 'promptGroup',
       entityName: 'prompt group',
-      request
+      request,
+      ids
     })
   } catch (error) {
     console.error('Error bulk deleting prompt groups:', error)

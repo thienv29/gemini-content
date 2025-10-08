@@ -7,14 +7,20 @@ interface BulkDeleteOptions {
   table: keyof PrismaClient
   entityName: string
   request: NextRequest
+  ids?: string[]
 }
 
-export async function handleBulkDelete({ table, entityName, request }: BulkDeleteOptions) {
+export async function handleBulkDelete({ table, entityName, request, ids: providedIds }: BulkDeleteOptions) {
   try {
     const tenantId = await getTenantId(request)
 
-    const body = await request.json()
-    const { ids } = body
+    let ids: string[]
+    if (providedIds) {
+      ids = providedIds
+    } else {
+      const body = await request.json()
+      ids = body.ids
+    }
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json({ error: 'IDs array is required' }, { status: 400 })

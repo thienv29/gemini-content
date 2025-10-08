@@ -113,7 +113,6 @@ export function WorkspaceSwitcher({
       onConfirm: async () => {
         try {
           await axios.delete(`/api/tenants/${workspace.id}`)
-          onWorkspaceChange?.()
         } catch (error) {
           console.error('Failed to delete workspace:', error)
         }
@@ -124,7 +123,6 @@ export function WorkspaceSwitcher({
   const handleTenantFormSuccess = () => {
     setTenantFormOpen(false)
     setEditingTenant(null)
-    onWorkspaceChange?.()
   }
 
   const handleCreateTenant = () => {
