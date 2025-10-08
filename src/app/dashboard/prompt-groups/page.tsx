@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import axios from "axios"
-import { Plus, Edit, Trash } from "lucide-react"
+import { Plus, Edit, Trash, Copy } from "lucide-react"
 import { SearchInput } from "@/components/ui/search-input"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
@@ -53,6 +53,7 @@ export default function PromptGroupsPage() {
   // Form states
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingGroup, setEditingGroup] = useState<PromptGroup | null>(null)
+  const [cloningGroup, setCloningGroup] = useState<Partial<PromptGroup> | null>(null)
 
 
   const { confirm } = useConfirmation()
@@ -127,6 +128,14 @@ export default function PromptGroupsPage() {
         const group = row.original
         return (
           <div className="flex gap-1 justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleClone(group)}
+              className="h-8 w-8 p-0"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -211,21 +220,38 @@ export default function PromptGroupsPage() {
 
   const handleCreate = () => {
     setEditingGroup(null)
+    setCloningGroup(null)
     setDialogOpen(true)
   }
 
   const handleEdit = (group: PromptGroup) => {
     setEditingGroup(group)
+    setCloningGroup(null)
+    setDialogOpen(true)
+  }
+
+  const handleClone = (group: PromptGroup) => {
+    const { id, createdAt, ...clonedData } = group
+    const clonedGroup = {
+      ...clonedData,
+      name: `${group.name} (Clone)`
+    }
+    setEditingGroup(null)
+    setCloningGroup(clonedGroup)
     setDialogOpen(true)
   }
 
   const handleFormSuccess = () => {
+    setDialogOpen(false)
+    setEditingGroup(null)
+    setCloningGroup(null)
     fetchPromptGroups() // Refresh data
   }
 
   const handleDialogClose = () => {
     setDialogOpen(false)
     setEditingGroup(null)
+    setCloningGroup(null)
   }
 
   // Selection state
@@ -346,6 +372,7 @@ export default function PromptGroupsPage() {
           open={dialogOpen}
           onClose={handleDialogClose}
           editingGroup={editingGroup}
+          initialData={cloningGroup || undefined}
           onSuccess={handleFormSuccess}
         />
 

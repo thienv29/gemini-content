@@ -51,14 +51,15 @@ interface PromptSettingFormProps {
   open: boolean
   onClose: () => void
   editingSetting?: PromptSetting | null
+  initialData?: Partial<PromptSetting>
   onSuccess: () => void
 }
 
-export function PromptSettingForm({ open, onClose, editingSetting, onSuccess }: PromptSettingFormProps) {
+export function PromptSettingForm({ open, onClose, editingSetting, initialData, onSuccess }: PromptSettingFormProps) {
   const [formData, setFormData] = useState<PromptSettingFormData>({
-    name: "",
-    description: "",
-    items: { prompts: [] }
+    name: initialData?.name || editingSetting?.name || "",
+    description: initialData?.description || editingSetting?.description || "",
+    items: initialData?.items || editingSetting?.items || { prompts: [] }
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -73,18 +74,14 @@ export function PromptSettingForm({ open, onClose, editingSetting, onSuccess }: 
 
   const debouncedSearch = useDebounce(promptSearch, 300)
 
-  // Update form data when editingSetting changes
+  // Update form data when editingSetting or initialData changes
   useEffect(() => {
-    if (editingSetting) {
-      setFormData({
-        name: editingSetting.name,
-        description: editingSetting.description || "",
-        items: editingSetting.items
-      })
-    } else {
-      setFormData({ name: "", description: "", items: { prompts: [] } })
-    }
-  }, [editingSetting])
+    setFormData({
+      name: initialData?.name || editingSetting?.name || "",
+      description: initialData?.description || editingSetting?.description || "",
+      items: initialData?.items || editingSetting?.items || { prompts: [] }
+    })
+  }, [editingSetting, initialData])
 
   // Fetch available prompts and groups
   useEffect(() => {

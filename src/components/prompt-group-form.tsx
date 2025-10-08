@@ -24,24 +24,25 @@ interface PromptGroupFormProps {
   open: boolean
   onClose: () => void
   editingGroup?: PromptGroup | null
+  initialData?: Partial<PromptGroup>
   onSuccess: () => void
 }
 
-export function PromptGroupForm({ open, onClose, editingGroup, onSuccess }: PromptGroupFormProps) {
+export function PromptGroupForm({ open, onClose, editingGroup, initialData, onSuccess }: PromptGroupFormProps) {
   const [formData, setFormData] = useState<PromptGroupFormData>({
-    name: editingGroup?.name || "",
-    description: editingGroup?.description || ""
+    name: initialData?.name || editingGroup?.name || "",
+    description: initialData?.description || editingGroup?.description || ""
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // Update form data when editingGroup changes
+  // Update form data when editingGroup or initialData changes
   useEffect(() => {
     setFormData({
-      name: editingGroup?.name || "",
-      description: editingGroup?.description || ""
+      name: initialData?.name || editingGroup?.name || "",
+      description: initialData?.description || editingGroup?.description || ""
     })
-  }, [editingGroup])
+  }, [editingGroup, initialData])
 
   const handleChange = (field: keyof PromptGroupFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))

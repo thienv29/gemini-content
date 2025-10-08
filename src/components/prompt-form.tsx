@@ -42,16 +42,17 @@ interface PromptFormProps {
   open: boolean
   onClose: () => void
   editingPrompt?: Prompt | null
+  initialData?: Partial<Prompt>
   onSuccess: () => void
 }
 
-export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFormProps) {
+export function PromptForm({ open, onClose, editingPrompt, initialData, onSuccess }: PromptFormProps) {
   const [formData, setFormData] = useState<PromptFormData>({
-    name: editingPrompt?.name || "",
-    description: editingPrompt?.description || "",
-    content: editingPrompt?.content || "",
-    variables: editingPrompt?.variables || {},
-    groups: editingPrompt?.groups.map(g => g.group.id) || []
+    name: initialData?.name || editingPrompt?.name || "",
+    description: initialData?.description || editingPrompt?.description || "",
+    content: initialData?.content || editingPrompt?.content || "",
+    variables: initialData?.variables || editingPrompt?.variables || {},
+    groups: initialData?.groups?.map(g => g.group.id) || editingPrompt?.groups.map(g => g.group.id) || []
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -64,16 +65,16 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
     (group.description && group.description.toLowerCase().includes(groupSearch.toLowerCase()))
   )
 
-  // Update form data when editingPrompt changes
+  // Update form data when editingPrompt or initialData changes
   useEffect(() => {
     setFormData({
-      name: editingPrompt?.name || "",
-      description: editingPrompt?.description || "",
-      content: editingPrompt?.content || "",
-      variables: editingPrompt?.variables || {},
-      groups: editingPrompt?.groups.map(g => g.group.id) || []
+      name: initialData?.name || editingPrompt?.name || "",
+      description: initialData?.description || editingPrompt?.description || "",
+      content: initialData?.content || editingPrompt?.content || "",
+      variables: initialData?.variables || editingPrompt?.variables || {},
+      groups: initialData?.groups?.map(g => g.group.id) || editingPrompt?.groups.map(g => g.group.id) || []
     })
-  }, [editingPrompt])
+  }, [editingPrompt, initialData])
 
   // Fetch available groups
   useEffect(() => {

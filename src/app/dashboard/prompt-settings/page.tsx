@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import axios from "axios"
-import { Plus, Edit, Trash } from "lucide-react"
+import { Plus, Edit, Trash, Copy } from "lucide-react"
 import { SearchInput } from "@/components/ui/search-input"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
@@ -46,6 +46,7 @@ export default function PromptSettingsPage() {
   // Form states
   const [formDialogOpen, setFormDialogOpen] = useState(false)
   const [editingSetting, setEditingSetting] = useState<PromptSetting | null>(null)
+  const [cloningSetting, setCloningSetting] = useState<Partial<PromptSetting> | null>(null)
 
   // Selection states
   const [selectedSettings, setSelectedSettings] = useState<Set<string>>(new Set())
@@ -112,6 +113,14 @@ export default function PromptSettingsPage() {
         const setting = row.original
         return (
           <div className="flex gap-1 justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleClone(setting)}
+              className="h-8 w-8 p-0"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -185,17 +194,31 @@ export default function PromptSettingsPage() {
 
   const handleCreate = () => {
     setEditingSetting(null)
+    setCloningSetting(null)
     setFormDialogOpen(true)
   }
 
   const handleEdit = (setting: PromptSetting) => {
     setEditingSetting(setting)
+    setCloningSetting(null)
+    setFormDialogOpen(true)
+  }
+
+  const handleClone = (setting: PromptSetting) => {
+    const { id, createdAt, ...clonedData } = setting
+    const clonedSetting = {
+      ...clonedData,
+      name: `${setting.name} (Clone)`
+    }
+    setEditingSetting(null)
+    setCloningSetting(clonedSetting)
     setFormDialogOpen(true)
   }
 
   const handleFormSuccess = () => {
     setFormDialogOpen(false)
     setEditingSetting(null)
+    setCloningSetting(null)
     fetchPromptSettings()
   }
 
@@ -316,6 +339,7 @@ export default function PromptSettingsPage() {
           open={formDialogOpen}
           onClose={() => setFormDialogOpen(false)}
           editingSetting={editingSetting}
+          initialData={cloningSetting || undefined}
           onSuccess={handleFormSuccess}
         />
       </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import axios from "axios"
-import { Plus, Edit, Trash } from "lucide-react"
+import { Plus, Edit, Trash, Copy } from "lucide-react"
 import { SearchInput } from "@/components/ui/search-input"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
@@ -51,6 +51,7 @@ export default function PromptsPage() {
   // Form states
   const [formDialogOpen, setFormDialogOpen] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null)
+  const [cloningPrompt, setCloningPrompt] = useState<Partial<Prompt> | null>(null)
 
   // Selection states
   const [selectedPrompts, setSelectedPrompts] = useState<Set<string>>(new Set())
@@ -127,6 +128,14 @@ export default function PromptsPage() {
             <Button
               variant="ghost"
               size="sm"
+              onClick={() => handleClone(prompt)}
+              className="h-8 w-8 p-0"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => handleEdit(prompt)}
               className="h-8 w-8 p-0"
             >
@@ -192,17 +201,31 @@ export default function PromptsPage() {
 
   const handleCreate = () => {
     setEditingPrompt(null)
+    setCloningPrompt(null)
     setFormDialogOpen(true)
   }
 
   const handleEdit = (prompt: Prompt) => {
     setEditingPrompt(prompt)
+    setCloningPrompt(null)
+    setFormDialogOpen(true)
+  }
+
+  const handleClone = (prompt: Prompt) => {
+    const { id, createdAt, ...clonedData } = prompt
+    const clonedPrompt = {
+      ...clonedData,
+      name: `${prompt.name} (Clone)`
+    }
+    setEditingPrompt(null)
+    setCloningPrompt(clonedPrompt)
     setFormDialogOpen(true)
   }
 
   const handleFormSuccess = () => {
     setFormDialogOpen(false)
     setEditingPrompt(null)
+    setCloningPrompt(null)
     fetchPrompts() // Refresh data
   }
 
@@ -332,6 +355,7 @@ export default function PromptsPage() {
           open={formDialogOpen}
           onClose={() => setFormDialogOpen(false)}
           editingPrompt={editingPrompt}
+          initialData={cloningPrompt || undefined}
           onSuccess={handleFormSuccess}
         />
       </div>
