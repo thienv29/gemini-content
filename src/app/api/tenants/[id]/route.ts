@@ -4,10 +4,11 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
+    const { id } = await params
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -17,7 +18,7 @@ export async function GET(
     const userTenant = await prisma.userTenant.findFirst({
       where: {
         userId: session.user.id,
-        tenantId: params.id,
+        tenantId: id,
       },
     })
 
@@ -26,7 +27,7 @@ export async function GET(
     }
 
     const tenant = await prisma.tenant.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!tenant) {
@@ -42,10 +43,11 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
+    const { id } = await params
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -55,7 +57,7 @@ export async function PUT(
     const userTenant = await prisma.userTenant.findFirst({
       where: {
         userId: session.user.id,
-        tenantId: params.id,
+        tenantId: id,
         role: 'admin',
       },
     })
@@ -72,7 +74,7 @@ export async function PUT(
     }
 
     const tenant = await prisma.tenant.update({
-      where: { id: params.id },
+      where: { id },
       data: { name: name.trim() },
     })
 
@@ -88,10 +90,11 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
+    const { id } = await params
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -101,7 +104,7 @@ export async function DELETE(
     const userTenant = await prisma.userTenant.findFirst({
       where: {
         userId: session.user.id,
-        tenantId: params.id,
+        tenantId: id,
         role: 'admin',
       },
     })
@@ -110,24 +113,25 @@ export async function DELETE(
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
 
-    // Check how many users are in this tenant
-    const userCount = await prisma.userTenant.count({
-      where: { tenantId: params.id },
+    // Delete related data in correct order
+    await prisma.prompt.deleteMany({
+      where: { tenantId: id },
     })
 
-    if (userCount <= 1) {
-      return NextResponse.json({
-        error: "Cannot delete tenant with only one user"
-      }, { status: 400 })
-    }
+    await prisma.promptGroup.deleteMany({
+      where: { tenantId: id },
+    })
 
-    // Delete all user associations and tenant
+    await prisma.promptSetting.deleteMany({
+      where: { tenantId: id },
+    })
+
     await prisma.userTenant.deleteMany({
-      where: { tenantId: params.id },
+      where: { tenantId: id },
     })
 
     await prisma.tenant.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({

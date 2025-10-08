@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState } from "react"
-import { ChevronsUpDown, Plus, Edit, Trash2 } from "lucide-react"
+import { ChevronsUpDown, Plus, Edit } from "lucide-react"
 import axios from "axios"
 
 import {
@@ -11,10 +11,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -58,6 +54,7 @@ export function WorkspaceSwitcher({
 
   const [tenantFormOpen, setTenantFormOpen] = useState(false)
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null)
+  const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null)
   const { data: session, update } = useSession()
   if (!activeWorkspace) {
     return null
@@ -91,20 +88,11 @@ export function WorkspaceSwitcher({
       updatedAt: '',
     }
     setEditingTenant(tenant)
+    setEditingWorkspace(workspace)
     setTenantFormOpen(true)
   }
 
   const handleDeleteTenant = async (workspace: Workspace) => {
-    if (workspace.userCount <= 1) {
-      confirm({
-        title: "Cannot delete workspace",
-        description: "This workspace has only one user and cannot be deleted.",
-        confirmText: "OK",
-        onConfirm: () => { }, // No action needed, just close the dialog
-      })
-      return
-    }
-
     confirm({
       title: "Delete workspace",
       description: `Are you sure you want to delete "${workspace.name}"? This action cannot be undone and will remove all associated prompts, settings, and user access.`,
@@ -123,10 +111,12 @@ export function WorkspaceSwitcher({
   const handleTenantFormSuccess = () => {
     setTenantFormOpen(false)
     setEditingTenant(null)
+    setEditingWorkspace(null)
   }
 
   const handleCreateTenant = () => {
     setEditingTenant(null)
+    setEditingWorkspace(null)
     setTenantFormOpen(true)
   }
 
@@ -162,37 +152,20 @@ export function WorkspaceSwitcher({
               <DropdownMenuItem
                 key={workspace.id}
                 className="gap-2 p-2"
-                onClick={() => handleSwitchWorkspace(workspace.id)}
               >
-                <div className="flex size-6 items-center justify-center rounded-md border">
-                  <workspace.logo className="size-3.5 shrink-0" />
+                <div
+                  className="flex-1 flex gap-2 items-center cursor-pointer"
+                  onClick={() => handleSwitchWorkspace(workspace.id)}
+                >
+                  <div className="flex size-6 items-center justify-center rounded-md border">
+                    <workspace.logo className="size-3.5 shrink-0" />
+                  </div>
+                  <span>{workspace.name}</span>
                 </div>
-                <span className="flex-1">{workspace.name}</span>
                 {workspace.role === 'admin' && (
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger onClick={(e) => e.stopPropagation()} className="ml-2 p-1">
-                      <ChevronsUpDown className="h-3 w-3" />
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent sideOffset={2}>
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation()
-                        handleEditTenant(workspace)
-                      }}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit workspace
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteTenant(workspace)
-                        }}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete workspace
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
+                  <div className="p-1 hover:bg-accent rounded cursor-pointer" onClick={() => handleEditTenant(workspace)}>
+                    <Edit className="h-4 w-4" />
+                  </div>
                 )}
               </DropdownMenuItem>
             ))}
@@ -209,9 +182,14 @@ export function WorkspaceSwitcher({
 
       <TenantForm
         open={tenantFormOpen}
-        onClose={() => setTenantFormOpen(false)}
+        onClose={() => {
+          setTenantFormOpen(false)
+          setEditingTenant(null)
+          setEditingWorkspace(null)
+        }}
         editingTenant={editingTenant}
         onSuccess={handleTenantFormSuccess}
+        onDelete={() => editingWorkspace && handleDeleteTenant(editingWorkspace)}
       />
     </SidebarMenu>
   )

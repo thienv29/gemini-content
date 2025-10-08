@@ -6,7 +6,7 @@ import axios from "axios"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Loader2 } from "lucide-react"
+import { Loader2, Trash2 } from "lucide-react"
 
 interface Tenant {
   id: string
@@ -20,9 +20,10 @@ interface TenantFormProps {
   onClose: () => void
   editingTenant?: Tenant | null
   onSuccess: () => void
+  onDelete?: () => void
 }
 
-export function TenantForm({ open, onClose, editingTenant, onSuccess }: TenantFormProps) {
+export function TenantForm({ open, onClose, editingTenant, onSuccess, onDelete }: TenantFormProps) {
   const [name, setName] = useState(editingTenant?.name || "")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -114,6 +115,12 @@ export function TenantForm({ open, onClose, editingTenant, onSuccess }: TenantFo
           )}
 
           <DialogFooter>
+            {editingTenant && onDelete && (
+              <Button type="button" variant="destructive" onClick={onDelete} className="mr-auto">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            )}
             <Button type="button" variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
