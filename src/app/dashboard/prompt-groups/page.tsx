@@ -11,6 +11,7 @@ import { useConfirmation } from "@/core/providers/confirmation-provider"
 import { PromptGroupForm } from "@/components/prompt-group-form"
 import { useDebounce } from "@/hooks/use-debounce"
 import { Loading } from "@/components/ui/loading"
+import { toast } from "sonner"
 
 
 interface PromptGroup {
@@ -171,18 +172,28 @@ export default function PromptGroupsPage() {
   }, [debouncedSearch])
 
   const handleDelete = (group: PromptGroup) => {
-    confirm({
-      title: "Delete Prompt Group",
-      description: `This will permanently delete the prompt group "${group.name}". This action cannot be undone.`,
-      variant: "destructive",
-      onConfirm: async () => {
-        try {
-          await axios.delete(`/api/prompt-groups/${group.id}`)
-          fetchPromptGroups() // Refresh data
-        } catch (error) {
-          console.error('Error deleting prompt group:', error)
-        }
+    // Optimistically remove from UI
+    setPromptGroups(prev => prev.filter(g => g.id !== group.id))
+
+    // Delete from backend after a delay (if not undone)
+    const timeoutId = setTimeout(async () => {
+      try {
+        await axios.delete(`/api/prompt-groups/${group.id}`)
+      } catch (error) {
+        console.error('Error deleting prompt group:', error)
       }
+    }, 3000) // 3 seconds delay
+
+    toast(`Prompt group "${group.name}" deleted`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          // Cancel the delete and restore the group in UI
+          clearTimeout(timeoutId)
+          setPromptGroups(prev => [...prev, group].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+          toast.success("Deletion cancelled")
+        },
+      },
     })
   }
 
@@ -261,24 +272,34 @@ export default function PromptGroupsPage() {
   }
 
   const handleBulkDelete = () => {
-    const selectedCount = selectedGroups.size
-    const selectedNames = promptGroups.filter(g => selectedGroups.has(g.id)).map(g => g.name).join(", ")
+    const selectedIds = Array.from(selectedGroups)
+    const selectedGroupsData = promptGroups.filter(g => selectedGroups.has(g.id))
 
-    confirm({
-      title: `Delete ${selectedCount} Prompt Group${selectedCount > 1 ? 's' : ''}`,
-      description: `This will permanently delete the selected prompt groups: ${selectedNames}. This action cannot be undone.`,
-      variant: "destructive",
-      onConfirm: async () => {
-        try {
-          await axios.post('/api/prompt-groups/bulk-delete', {
-            ids: Array.from(selectedGroups)
-          })
-          setSelectedGroups(new Set()) // Clear selection
-          fetchPromptGroups() // Refresh data
-        } catch (error) {
-          console.error('Error bulk deleting prompt groups:', error)
-        }
+    // Optimistically remove from UI
+    setPromptGroups(prev => prev.filter(g => !selectedGroups.has(g.id)))
+    setSelectedGroups(new Set()) // Clear selection
+
+    // Delete from backend after a delay (if not undone)
+    const timeoutId = setTimeout(async () => {
+      try {
+        await axios.post('/api/prompt-groups/bulk-delete', {
+          ids: selectedIds
+        })
+      } catch (error) {
+        console.error('Error bulk deleting prompt groups:', error)
       }
+    }, 3000) // 3 seconds delay
+
+    toast(`Deleted ${selectedGroupsData.length} prompt groups`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          // Cancel the delete and restore the groups in UI
+          clearTimeout(timeoutId)
+          setPromptGroups(prev => [...prev, ...selectedGroupsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+          toast.success("Deletion cancelled")
+        },
+      },
     })
   }
 

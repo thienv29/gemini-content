@@ -11,6 +11,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { Loading } from "@/components/ui/loading"
 import { PromptForm } from "@/components/prompt-form"
 import { useConfirmation } from "@/core/providers/confirmation-provider"
+import { toast } from "sonner"
 
 
 interface Prompt {
@@ -184,18 +185,28 @@ export default function PromptsPage() {
   }, [prompts])
 
   const handleDelete = (prompt: Prompt) => {
-    confirm({
-      title: "Delete Prompt",
-      description: `This will permanently delete the prompt "${prompt.name}". This action cannot be undone.`,
-      variant: "destructive",
-      onConfirm: async () => {
-        try {
-          await axios.delete(`/api/prompts/${prompt.id}`)
-          fetchPrompts() // Refresh data
-        } catch (error) {
-          console.error('Error deleting prompt:', error)
-        }
+    // Optimistically remove from UI
+    setPrompts(prev => prev.filter(p => p.id !== prompt.id))
+
+    // Delete from backend after a delay (if not undone)
+    const timeoutId = setTimeout(async () => {
+      try {
+        await axios.delete(`/api/prompts/${prompt.id}`)
+      } catch (error) {
+        console.error('Error deleting prompt:', error)
       }
+    }, 3000) // 3 seconds delay
+
+    toast(`Prompt "${prompt.name}" deleted`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          // Cancel the delete and restore the prompt in UI
+          clearTimeout(timeoutId)
+          setPrompts(prev => [...prev, prompt].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+          toast.success("Deletion cancelled")
+        },
+      },
     })
   }
 
@@ -264,24 +275,34 @@ export default function PromptsPage() {
   }
 
   const handleBulkDelete = () => {
-    const selectedCount = selectedPrompts.size
-    const selectedNames = prompts.filter(p => selectedPrompts.has(p.id)).map(p => p.name).join(", ")
+    const selectedIds = Array.from(selectedPrompts)
+    const selectedPromptsData = prompts.filter(p => selectedPrompts.has(p.id))
 
-    confirm({
-      title: `Delete ${selectedCount} Prompt${selectedCount > 1 ? 's' : ''}`,
-      description: `This will permanently delete the selected prompts: ${selectedNames}. This action cannot be undone.`,
-      variant: "destructive",
-      onConfirm: async () => {
-        try {
-          await axios.post('/api/prompts/bulk-delete', {
-            ids: Array.from(selectedPrompts)
-          })
-          setSelectedPrompts(new Set()) // Clear selection
-          fetchPrompts() // Refresh data
-        } catch (error) {
-          console.error('Error bulk deleting prompts:', error)
-        }
+    // Optimistically remove from UI
+    setPrompts(prev => prev.filter(p => !selectedPrompts.has(p.id)))
+    setSelectedPrompts(new Set()) // Clear selection
+
+    // Delete from backend after a delay (if not undone)
+    const timeoutId = setTimeout(async () => {
+      try {
+        await axios.post('/api/prompts/bulk-delete', {
+          ids: selectedIds
+        })
+      } catch (error) {
+        console.error('Error bulk deleting prompts:', error)
       }
+    }, 3000) // 3 seconds delay
+
+    toast(`Deleted ${selectedPromptsData.length} prompts`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          // Cancel the delete and restore the prompts in UI
+          clearTimeout(timeoutId)
+          setPrompts(prev => [...prev, ...selectedPromptsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+          toast.success("Deletion cancelled")
+        },
+      },
     })
   }
 

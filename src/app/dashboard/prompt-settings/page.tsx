@@ -11,6 +11,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { useConfirmation } from "@/core/providers/confirmation-provider"
 import { PromptSettingForm } from "@/components/prompt-setting-form"
 import { Loading } from "@/components/ui/loading"
+import { toast } from "sonner"
 
 
 interface PromptSetting {
@@ -167,14 +168,28 @@ export default function PromptSettingsPage() {
   }, [fetchPromptSettings])
 
   const handleDelete = (setting: PromptSetting) => {
-    confirm({
-      title: "Delete Prompt Setting",
-      description: `This will permanently delete the prompt setting "${setting.name}". This action cannot be undone.`,
-      variant: "destructive",
-      onConfirm: async () => {
+    // Optimistically remove from UI
+    setPromptSettings(prev => prev.filter(s => s.id !== setting.id))
+
+    // Delete from backend after a delay (if not undone)
+    const timeoutId = setTimeout(async () => {
+      try {
         await axios.delete(`/api/prompt-settings/${setting.id}`)
-        fetchPromptSettings() // Refresh data
+      } catch (error) {
+        console.error('Error deleting prompt setting:', error)
       }
+    }, 3000) // 3 seconds delay
+
+    toast(`Prompt setting "${setting.name}" deleted`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          // Cancel the delete and restore the setting in UI
+          clearTimeout(timeoutId)
+          setPromptSettings(prev => [...prev, setting].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+          toast.success("Deletion cancelled")
+        },
+      },
     })
   }
 
@@ -243,24 +258,34 @@ export default function PromptSettingsPage() {
   }
 
   const handleBulkDelete = () => {
-    const selectedCount = selectedSettings.size
-    const selectedNames = promptSettings.filter(s => selectedSettings.has(s.id)).map(s => s.name).join(", ")
+    const selectedIds = Array.from(selectedSettings)
+    const selectedSettingsData = promptSettings.filter(s => selectedSettings.has(s.id))
 
-    confirm({
-      title: `Delete ${selectedCount} Prompt Setting${selectedCount > 1 ? 's' : ''}`,
-      description: `This will permanently delete the selected prompt settings: ${selectedNames}. This action cannot be undone.`,
-      variant: "destructive",
-      onConfirm: async () => {
-        try {
-          await axios.post('/api/prompt-settings/bulk-delete', {
-            ids: Array.from(selectedSettings)
-          })
-          setSelectedSettings(new Set()) // Clear selection
-          fetchPromptSettings() // Refresh data
-        } catch (error) {
-          console.error('Error bulk deleting prompt settings:', error)
-        }
+    // Optimistically remove from UI
+    setPromptSettings(prev => prev.filter(s => !selectedSettings.has(s.id)))
+    setSelectedSettings(new Set()) // Clear selection
+
+    // Delete from backend after a delay (if not undone)
+    const timeoutId = setTimeout(async () => {
+      try {
+        await axios.post('/api/prompt-settings/bulk-delete', {
+          ids: selectedIds
+        })
+      } catch (error) {
+        console.error('Error bulk deleting prompt settings:', error)
       }
+    }, 3000) // 3 seconds delay
+
+    toast(`Deleted ${selectedSettingsData.length} prompt settings`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          // Cancel the delete and restore the settings in UI
+          clearTimeout(timeoutId)
+          setPromptSettings(prev => [...prev, ...selectedSettingsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+          toast.success("Deletion cancelled")
+        },
+      },
     })
   }
 
