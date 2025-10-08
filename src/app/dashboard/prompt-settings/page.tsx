@@ -10,6 +10,7 @@ import { DataTable } from "@/components/ui/data-table"
 
 import { useConfirmation } from "@/core/providers/confirmation-provider"
 import { PromptSettingForm } from "@/components/prompt-setting-form"
+import { useBulkDelete } from "@/hooks/use-bulk-delete"
 import { Loading } from "@/components/ui/loading"
 import { toast } from "sonner"
 
@@ -49,8 +50,13 @@ export default function PromptSettingsPage() {
   const [editingSetting, setEditingSetting] = useState<PromptSetting | null>(null)
   const [cloningSetting, setCloningSetting] = useState<Partial<PromptSetting> | null>(null)
 
-  // Selection states
-  const [selectedSettings, setSelectedSettings] = useState<Set<string>>(new Set())
+  // Bulk delete functionality using shared hook
+  const bulkDelete = useBulkDelete({
+    data: promptSettings,
+    idKey: 'id',
+    apiPath: '/api/prompt-settings',
+    entityName: 'prompt setting'
+  })
 
   const columns: ColumnDef<PromptSetting>[] = [
     {
@@ -58,8 +64,8 @@ export default function PromptSettingsPage() {
       header: () => (
         <input
           type="checkbox"
-          checked={promptSettings.length > 0 && selectedSettings.size === promptSettings.length}
-          onChange={(e) => handleSelectAll(e.target.checked)}
+          checked={bulkDelete.isAllSelected}
+          onChange={(e) => bulkDelete.handleSelectAll(e.target.checked)}
         />
       ),
       cell: ({ row }) => {
@@ -67,8 +73,8 @@ export default function PromptSettingsPage() {
         return (
           <input
             type="checkbox"
-            checked={selectedSettings.has(setting.id)}
-            onChange={(e) => handleSelectSetting(setting.id, e.target.checked)}
+            checked={bulkDelete.selectedItems.has(setting.id)}
+            onChange={(e) => bulkDelete.handleSelectItem(setting.id, e.target.checked)}
           />
         )
       },
@@ -237,61 +243,11 @@ export default function PromptSettingsPage() {
     fetchPromptSettings()
   }
 
-  const handleSelectSetting = (settingId: string, checked: boolean) => {
-    setSelectedSettings(prev => {
-      const newSet = new Set(prev)
-      if (checked) {
-        newSet.add(settingId)
-      } else {
-        newSet.delete(settingId)
-      }
-      return newSet
-    })
-  }
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedSettings(new Set(promptSettings.map(s => s.id)))
-    } else {
-      setSelectedSettings(new Set())
-    }
-  }
-
-  const handleBulkDelete = () => {
-    const selectedIds = Array.from(selectedSettings)
-    const selectedSettingsData = promptSettings.filter(s => selectedSettings.has(s.id))
-
-    // Optimistically remove from UI
-    setPromptSettings(prev => prev.filter(s => !selectedSettings.has(s.id)))
-    setSelectedSettings(new Set()) // Clear selection
-
-    // Delete from backend after a delay (if not undone)
-    const timeoutId = setTimeout(async () => {
-      try {
-        await axios.post('/api/prompt-settings/bulk-delete', {
-          ids: selectedIds
-        })
-      } catch (error) {
-        console.error('Error bulk deleting prompt settings:', error)
-      }
-    }, 3000) // 3 seconds delay
-
-    toast(`Deleted ${selectedSettingsData.length} prompt settings`, {
-      action: {
-        label: "Undo",
-        onClick: () => {
-          // Cancel the delete and restore the settings in UI
-          clearTimeout(timeoutId)
-          setPromptSettings(prev => [...prev, ...selectedSettingsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-          toast.success("Deletion cancelled")
-        },
-      },
-    })
-  }
 
   // Clear selections when data changes
   useEffect(() => {
-    setSelectedSettings(new Set())
+    bulkDelete.resetSelection()
   }, [promptSettings])
 
   if (loading && promptSettings.length === 0) {
@@ -306,14 +262,20 @@ export default function PromptSettingsPage() {
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Prompt Settings</h2>
           <div className="flex gap-2">
-            {selectedSettings.size > 0 && (
+            {bulkDelete.selectedCount > 0 && (
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={handleBulkDelete}
+                onClick={() => bulkDelete.handleBulkDelete((selectedSettingsData: PromptSetting[]) => {
+                  if (selectedSettingsData.length > 0) {
+                    setPromptSettings(prev => [...prev, ...selectedSettingsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+                  } else {
+                    setPromptSettings(prev => prev.filter(s => !bulkDelete.selectedItems.has(s.id)))
+                  }
+                })}
               >
                 <Trash className="h-4 w-4 mr-2" />
-                Delete Selected ({selectedSettings.size})
+                Delete Selected ({bulkDelete.selectedCount})
               </Button>
             )}
             <Button onClick={handleCreate}>

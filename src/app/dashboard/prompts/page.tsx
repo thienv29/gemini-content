@@ -11,6 +11,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { Loading } from "@/components/ui/loading"
 import { PromptForm } from "@/components/prompt-form"
 import { useConfirmation } from "@/core/providers/confirmation-provider"
+import { useBulkDelete } from "@/hooks/use-bulk-delete"
 import { toast } from "sonner"
 
 
@@ -54,10 +55,15 @@ export default function PromptsPage() {
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null)
   const [cloningPrompt, setCloningPrompt] = useState<Partial<Prompt> | null>(null)
 
-  // Selection states
-  const [selectedPrompts, setSelectedPrompts] = useState<Set<string>>(new Set())
-
   const { confirm } = useConfirmation()
+
+  // Bulk delete functionality using shared hook
+  const bulkDelete = useBulkDelete({
+    data: prompts,
+    idKey: 'id',
+    apiPath: '/api/prompts',
+    entityName: 'prompt'
+  })
 
   const columns: ColumnDef<Prompt>[] = [
     {
@@ -65,8 +71,8 @@ export default function PromptsPage() {
       header: () => (
         <input
           type="checkbox"
-          checked={prompts.length > 0 && selectedPrompts.size === prompts.length}
-          onChange={(e) => handleSelectAll(e.target.checked)}
+          checked={bulkDelete.isAllSelected}
+          onChange={(e) => bulkDelete.handleSelectAll(e.target.checked)}
         />
       ),
       cell: ({ row }) => {
@@ -74,8 +80,8 @@ export default function PromptsPage() {
         return (
           <input
             type="checkbox"
-            checked={selectedPrompts.has(prompt.id)}
-            onChange={(e) => handleSelectPrompt(prompt.id, e.target.checked)}
+            checked={bulkDelete.selectedItems.has(prompt.id)}
+            onChange={(e) => bulkDelete.handleSelectItem(prompt.id, e.target.checked)}
           />
         )
       },
@@ -181,7 +187,7 @@ export default function PromptsPage() {
 
   // Clear selections when data changes (pagination, search, etc.)
   useEffect(() => {
-    setSelectedPrompts(new Set())
+    bulkDelete.resetSelection()
   }, [prompts])
 
   const handleDelete = (prompt: Prompt) => {
@@ -254,55 +260,16 @@ export default function PromptsPage() {
     setPage(newPage)
   }
 
-  const handleSelectPrompt = (promptId: string, checked: boolean) => {
-    setSelectedPrompts(prev => {
-      const newSet = new Set(prev)
-      if (checked) {
-        newSet.add(promptId)
-      } else {
-        newSet.delete(promptId)
-      }
-      return newSet
-    })
-  }
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedPrompts(new Set(prompts.map(p => p.id)))
-    } else {
-      setSelectedPrompts(new Set())
-    }
-  }
-
   const handleBulkDelete = () => {
-    const selectedIds = Array.from(selectedPrompts)
-    const selectedPromptsData = prompts.filter(p => selectedPrompts.has(p.id))
-
-    // Optimistically remove from UI
-    setPrompts(prev => prev.filter(p => !selectedPrompts.has(p.id)))
-    setSelectedPrompts(new Set()) // Clear selection
-
-    // Delete from backend after a delay (if not undone)
-    const timeoutId = setTimeout(async () => {
-      try {
-        await axios.post('/api/prompts/bulk-delete', {
-          ids: selectedIds
-        })
-      } catch (error) {
-        console.error('Error bulk deleting prompts:', error)
+    bulkDelete.handleBulkDelete((selectedPromptsData: Prompt[]) => {
+      // Restore items on undo or keep optimistically removed
+      if (selectedPromptsData.length > 0) {
+        // Undo: add back the selected items
+        setPrompts(prev => [...prev, ...selectedPromptsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+      } else {
+        // Optimistic delete: remove selected items from UI immediately
+        setPrompts(prev => prev.filter(p => !bulkDelete.selectedItems.has(p.id)))
       }
-    }, 3000) // 3 seconds delay
-
-    toast(`Deleted ${selectedPromptsData.length} prompts`, {
-      action: {
-        label: "Undo",
-        onClick: () => {
-          // Cancel the delete and restore the prompts in UI
-          clearTimeout(timeoutId)
-          setPrompts(prev => [...prev, ...selectedPromptsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-          toast.success("Deletion cancelled")
-        },
-      },
     })
   }
 
@@ -320,14 +287,14 @@ export default function PromptsPage() {
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Prompts</h2>
           <div className="flex gap-2">
-            {selectedPrompts.size > 0 && (
+            {bulkDelete.selectedCount > 0 && (
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={handleBulkDelete}
               >
                 <Trash className="h-4 w-4 mr-2" />
-                Delete Selected ({selectedPrompts.size})
+                Delete Selected ({bulkDelete.selectedCount})
               </Button>
             )}
             <Button onClick={handleCreate}>

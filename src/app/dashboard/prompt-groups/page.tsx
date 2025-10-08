@@ -10,6 +10,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { useConfirmation } from "@/core/providers/confirmation-provider"
 import { PromptGroupForm } from "@/components/prompt-group-form"
 import { useDebounce } from "@/hooks/use-debounce"
+import { useBulkDelete } from "@/hooks/use-bulk-delete"
 import { Loading } from "@/components/ui/loading"
 import { toast } from "sonner"
 
@@ -53,14 +54,22 @@ export default function PromptGroupsPage() {
 
   const { confirm } = useConfirmation()
 
+  // Bulk delete functionality using shared hook
+  const bulkDelete = useBulkDelete({
+    data: promptGroups,
+    idKey: 'id',
+    apiPath: '/api/prompt-groups',
+    entityName: 'prompt group'
+  })
+
   const columns: ColumnDef<PromptGroup>[] = [
     {
       id: "select",
       header: () => (
         <input
           type="checkbox"
-          checked={promptGroups.length > 0 && selectedGroups.size === promptGroups.length}
-          onChange={(e) => handleSelectAll(e.target.checked)}
+          checked={bulkDelete.isAllSelected}
+          onChange={(e) => bulkDelete.handleSelectAll(e.target.checked)}
         />
       ),
       cell: ({ row }) => {
@@ -68,8 +77,8 @@ export default function PromptGroupsPage() {
         return (
           <input
             type="checkbox"
-            checked={selectedGroups.has(group.id)}
-            onChange={(e) => handleSelectGroup(group.id, e.target.checked)}
+            checked={bulkDelete.selectedItems.has(group.id)}
+            onChange={(e) => bulkDelete.handleSelectItem(group.id, e.target.checked)}
           />
         )
       },
@@ -248,64 +257,11 @@ export default function PromptGroupsPage() {
     setCloningGroup(null)
   }
 
-  // Selection state
-  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set())
 
-  const handleSelectGroup = (groupId: string, checked: boolean) => {
-    setSelectedGroups(prev => {
-      const newSet = new Set(prev)
-      if (checked) {
-        newSet.add(groupId)
-      } else {
-        newSet.delete(groupId)
-      }
-      return newSet
-    })
-  }
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedGroups(new Set(promptGroups.map(g => g.id)))
-    } else {
-      setSelectedGroups(new Set())
-    }
-  }
-
-  const handleBulkDelete = () => {
-    const selectedIds = Array.from(selectedGroups)
-    const selectedGroupsData = promptGroups.filter(g => selectedGroups.has(g.id))
-
-    // Optimistically remove from UI
-    setPromptGroups(prev => prev.filter(g => !selectedGroups.has(g.id)))
-    setSelectedGroups(new Set()) // Clear selection
-
-    // Delete from backend after a delay (if not undone)
-    const timeoutId = setTimeout(async () => {
-      try {
-        await axios.post('/api/prompt-groups/bulk-delete', {
-          ids: selectedIds
-        })
-      } catch (error) {
-        console.error('Error bulk deleting prompt groups:', error)
-      }
-    }, 3000) // 3 seconds delay
-
-    toast(`Deleted ${selectedGroupsData.length} prompt groups`, {
-      action: {
-        label: "Undo",
-        onClick: () => {
-          // Cancel the delete and restore the groups in UI
-          clearTimeout(timeoutId)
-          setPromptGroups(prev => [...prev, ...selectedGroupsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-          toast.success("Deletion cancelled")
-        },
-      },
-    })
-  }
 
   // Clear selections when data changes
   useEffect(() => {
-    setSelectedGroups(new Set())
+    bulkDelete.resetSelection()
   }, [promptGroups])
 
   if (loading && promptGroups.length === 0) {
@@ -320,14 +276,20 @@ export default function PromptGroupsPage() {
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Prompt Groups</h2>
           <div className="flex gap-2">
-            {selectedGroups.size > 0 && (
+            {bulkDelete.selectedCount > 0 && (
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={handleBulkDelete}
+                onClick={() => bulkDelete.handleBulkDelete((selectedGroupsData: PromptGroup[]) => {
+                  if (selectedGroupsData.length > 0) {
+                    setPromptGroups(prev => [...prev, ...selectedGroupsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+                  } else {
+                    setPromptGroups(prev => prev.filter(g => !bulkDelete.selectedItems.has(g.id)))
+                  }
+                })}
               >
                 <Trash className="h-4 w-4 mr-2" />
-                Delete Selected ({selectedGroups.size})
+                Delete Selected ({bulkDelete.selectedCount})
               </Button>
             )}
             <Button onClick={handleCreate}>
