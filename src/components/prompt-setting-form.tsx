@@ -284,7 +284,7 @@ export function PromptSettingForm({ open, onClose, editingSetting, initialData, 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1">
           <div className="flex gap-6 flex-1 min-h-0 py-4">
             {/* Left Column - Selected Prompts */}
-            <div className="flex-1 flex flex-col">
+            <div className="w-[50%] flex-1 flex flex-col">
               <div className="flex items-center justify-between mb-2">
                 <Label>Selected Prompts ({formData.items.prompts.length})</Label>
                 {formData.items.prompts.length > 0 && (
@@ -299,7 +299,7 @@ export function PromptSettingForm({ open, onClose, editingSetting, initialData, 
                   </Button>
                 )}
               </div>
-              <div className="flex-1 border rounded-md p-3 overflow-y-auto bg-background min-h-[300px]">
+              <div className="flex-1 border rounded-md p-3 overflow-y-auto bg-background min-h-[300px] max-h-[700px]">
                 <div className="space-y-2">
                   {formData.items.prompts.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
@@ -346,7 +346,7 @@ export function PromptSettingForm({ open, onClose, editingSetting, initialData, 
             </div>
 
             {/* Right Column - Search and Selection */}
-            <div className="flex-1 space-y-4 flex flex-col">
+            <div className="w-[50%] flex-1 space-y-4 flex flex-col">
               {/* Name and Description */}
               <div className="space-y-4">
                 <div>
@@ -396,7 +396,7 @@ export function PromptSettingForm({ open, onClose, editingSetting, initialData, 
                     ))}
                   </select>
                 </div>
-                <div className="flex-1 border rounded-md p-3 overflow-y-auto bg-background min-h-0 mt-2">
+                <div className="flex-1 border rounded-md p-3 overflow-y-auto bg-background min-h-0 mt-2 max-h-[300px]">
                   <div className="space-y-2">
                     {filteredPrompts
                       .filter(prompt => !formData.items.prompts.some(p => p.promptId === prompt.id))
