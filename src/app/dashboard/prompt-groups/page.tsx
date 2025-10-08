@@ -261,13 +261,13 @@ export default function PromptGroupsPage() {
       variant: "destructive",
       onConfirm: async () => {
         try {
-          await Promise.all(
-            Array.from(selectedGroups).map(id => axios.delete(`/api/prompt-groups/${id}`))
-          )
+          await axios.post('/api/prompt-groups/bulk-delete', {
+            ids: Array.from(selectedGroups)
+          })
           setSelectedGroups(new Set()) // Clear selection
           fetchPromptGroups() // Refresh data
         } catch (error) {
-          console.error('Error deleting prompt groups:', error)
+          console.error('Error bulk deleting prompt groups:', error)
         }
       }
     })

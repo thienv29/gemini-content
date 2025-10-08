@@ -229,13 +229,13 @@ export default function PromptSettingsPage() {
       variant: "destructive",
       onConfirm: async () => {
         try {
-          await Promise.all(
-            Array.from(selectedSettings).map(id => axios.delete(`/api/prompt-settings/${id}`))
-          )
+          await axios.post('/api/prompt-settings/bulk-delete', {
+            ids: Array.from(selectedSettings)
+          })
           setSelectedSettings(new Set()) // Clear selection
           fetchPromptSettings() // Refresh data
         } catch (error) {
-          console.error('Error deleting prompt settings:', error)
+          console.error('Error bulk deleting prompt settings:', error)
         }
       }
     })

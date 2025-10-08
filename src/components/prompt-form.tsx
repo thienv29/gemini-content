@@ -335,7 +335,7 @@ export function PromptForm({ open, onClose, editingPrompt, onSuccess }: PromptFo
               </div>
 
               {/* Groups Section */}
-              <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex-1 flex flex-col min-h-0 mt-8">
                 <Label className="mb-2">Groups</Label>
                 <div className="flex-1 flex flex-col min-h-0 space-y-2">
                   <Input

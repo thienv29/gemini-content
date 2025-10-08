@@ -250,13 +250,13 @@ export default function PromptsPage() {
       variant: "destructive",
       onConfirm: async () => {
         try {
-          await Promise.all(
-            Array.from(selectedPrompts).map(id => axios.delete(`/api/prompts/${id}`))
-          )
+          await axios.post('/api/prompts/bulk-delete', {
+            ids: Array.from(selectedPrompts)
+          })
           setSelectedPrompts(new Set()) // Clear selection
           fetchPrompts() // Refresh data
         } catch (error) {
-          console.error('Error deleting prompts:', error)
+          console.error('Error bulk deleting prompts:', error)
         }
       }
     })
