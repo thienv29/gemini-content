@@ -54,9 +54,51 @@ export function useBulkDelete<T extends Record<string, any>>({
     clearSelection()
 
     let isUndone = false
+    const delay = 5000 // 5 seconds
+
+    const undoAction = () => {
+      // Cancel the delete and restore the items in UI
+      isUndone = true
+      clearTimeout(timeoutId)
+      clearInterval(countdownInterval)
+      toast.dismiss(toastId)
+      onOptimisticUpdate(selectedItemsData)
+      toast.success("Deletion cancelled")
+    }
+
+    // Create toast with initial message
+    const toastId = toast(`Deleted ${selectedItemsData.length} ${entityName}${selectedItemsData.length !== 1 ? 's' : ''} - Undo in 5s`, {
+      action: {
+        label: "Undo",
+        onClick: undoAction,
+      },
+    })
+
+    // Update toast countdown every second
+    let countdown = 5
+    const countdownInterval = setInterval(() => {
+      countdown--
+      if (countdown > 0 && !isUndone) {
+        toast(`Deleted ${selectedItemsData.length} ${entityName}${selectedItemsData.length !== 1 ? 's' : ''} - Undo in ${countdown}s`, {
+          id: toastId,
+          action: {
+            label: "Undo",
+            onClick: undoAction,
+          },
+        })
+      } else {
+        clearInterval(countdownInterval)
+        if (countdown === 0 && !isUndone) {
+          toast.dismiss(toastId)
+        }
+      }
+    }, 1000)
 
     // Delete from backend after a delay (if not undone)
     const timeoutId = setTimeout(async () => {
+      clearInterval(countdownInterval)
+      toast.dismiss(toastId)
+
       if (isUndone) return // Skip if undone
 
       try {
@@ -68,22 +110,7 @@ export function useBulkDelete<T extends Record<string, any>>({
         console.error(`Error bulk deleting ${entityName}s:`, error)
         toast.error(`Failed to delete ${entityName}s`)
       }
-    }, 3000) // 3 seconds delay
-
-    const undoAction = () => {
-      // Cancel the delete and restore the items in UI
-      isUndone = true
-      clearTimeout(timeoutId)
-      onOptimisticUpdate(selectedItemsData)
-      toast.success("Deletion cancelled")
-    }
-
-    toast(`Deleted ${selectedItemsData.length} ${entityName}${selectedItemsData.length !== 1 ? 's' : ''}`, {
-      action: {
-        label: "Undo",
-        onClick: undoAction,
-      },
-    })
+    }, delay)
   }, [selectedItems, data, idKey, apiPath, entityName, onSuccess, clearSelection])
 
   // Reset selection when data changes (pagination, search, etc.)
