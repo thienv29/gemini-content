@@ -191,29 +191,22 @@ export default function PromptsPage() {
   }, [prompts])
 
   const handleDelete = (prompt: Prompt) => {
-    // Optimistically remove from UI
-    setPrompts(prev => prev.filter(p => p.id !== prompt.id))
+    // Temporarily select this single item
+    bulkDelete.handleSelectItem(prompt.id, true)
 
-    // Delete from backend after a delay (if not undone)
-    const timeoutId = setTimeout(async () => {
-      try {
-        await axios.delete(`/api/prompts/${prompt.id}`)
-      } catch (error) {
-        console.error('Error deleting prompt:', error)
+    // Call the same bulk delete handler
+    bulkDelete.handleBulkDelete((selectedPromptsData: Prompt[], action: 'delete' | 'undo') => {
+      if (action === 'delete') {
+        // Optimistic delete: remove the item from UI
+        setPrompts(prev => prev.filter(p => p.id !== prompt.id))
+      } else if (action === 'undo') {
+        // Undo: add back the item
+        setPrompts(prev => [...prev, ...selectedPromptsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
       }
-    }, 3000) // 3 seconds delay
-
-    toast(`Prompt "${prompt.name}" deleted`, {
-      action: {
-        label: "Undo",
-        onClick: () => {
-          // Cancel the delete and restore the prompt in UI
-          clearTimeout(timeoutId)
-          setPrompts(prev => [...prev, prompt].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-          toast.success("Deletion cancelled")
-        },
-      },
     })
+
+    // Clear the temporary selection
+    bulkDelete.handleSelectItem(prompt.id, false)
   }
 
   const handleCreate = () => {
@@ -261,14 +254,13 @@ export default function PromptsPage() {
   }
 
   const handleBulkDelete = () => {
-    bulkDelete.handleBulkDelete((selectedPromptsData: Prompt[]) => {
-      // Restore items on undo or keep optimistically removed
-      if (selectedPromptsData.length > 0) {
+    bulkDelete.handleBulkDelete((selectedPromptsData: Prompt[], action: 'delete' | 'undo') => {
+      if (action === 'delete') {
+        // Optimistic delete: remove selected items from UI
+        setPrompts(prev => prev.filter(p => !bulkDelete.selectedItems.has(p.id)))
+      } else if (action === 'undo') {
         // Undo: add back the selected items
         setPrompts(prev => [...prev, ...selectedPromptsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-      } else {
-        // Optimistic delete: remove selected items from UI immediately
-        setPrompts(prev => prev.filter(p => !bulkDelete.selectedItems.has(p.id)))
       }
     })
   }

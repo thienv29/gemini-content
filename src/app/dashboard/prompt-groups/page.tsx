@@ -181,29 +181,22 @@ export default function PromptGroupsPage() {
   }, [debouncedSearch])
 
   const handleDelete = (group: PromptGroup) => {
-    // Optimistically remove from UI
-    setPromptGroups(prev => prev.filter(g => g.id !== group.id))
+    // Temporarily select this single item
+    bulkDelete.handleSelectItem(group.id, true)
 
-    // Delete from backend after a delay (if not undone)
-    const timeoutId = setTimeout(async () => {
-      try {
-        await axios.delete(`/api/prompt-groups/${group.id}`)
-      } catch (error) {
-        console.error('Error deleting prompt group:', error)
+    // Call the same bulk delete handler
+    bulkDelete.handleBulkDelete((selectedGroupsData: PromptGroup[], action: 'delete' | 'undo') => {
+      if (action === 'delete') {
+        // Optimistic delete: remove the item from UI
+        setPromptGroups(prev => prev.filter(g => g.id !== group.id))
+      } else if (action === 'undo') {
+        // Undo: add back the item
+        setPromptGroups(prev => [...prev, ...selectedGroupsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
       }
-    }, 3000) // 3 seconds delay
-
-    toast(`Prompt group "${group.name}" deleted`, {
-      action: {
-        label: "Undo",
-        onClick: () => {
-          // Cancel the delete and restore the group in UI
-          clearTimeout(timeoutId)
-          setPromptGroups(prev => [...prev, group].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-          toast.success("Deletion cancelled")
-        },
-      },
     })
+
+    // Clear the temporary selection
+    bulkDelete.handleSelectItem(group.id, false)
   }
 
 
@@ -280,11 +273,11 @@ export default function PromptGroupsPage() {
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={() => bulkDelete.handleBulkDelete((selectedGroupsData: PromptGroup[]) => {
-                  if (selectedGroupsData.length > 0) {
-                    setPromptGroups(prev => [...prev, ...selectedGroupsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-                  } else {
+                onClick={() => bulkDelete.handleBulkDelete((selectedGroupsData: PromptGroup[], action: 'delete' | 'undo') => {
+                  if (action === 'delete') {
                     setPromptGroups(prev => prev.filter(g => !bulkDelete.selectedItems.has(g.id)))
+                  } else if (action === 'undo') {
+                    setPromptGroups(prev => [...prev, ...selectedGroupsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
                   }
                 })}
               >

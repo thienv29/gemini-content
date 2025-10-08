@@ -45,12 +45,12 @@ export function useBulkDelete<T extends Record<string, any>>({
     setSelectedItems(new Set())
   }, [])
 
-  const handleBulkDelete = useCallback((onOptimisticUpdate: (selectedItems: T[]) => void) => {
+  const handleBulkDelete = useCallback((onOptimisticUpdate: (selectedItems: T[], action: 'delete' | 'undo') => void) => {
     const selectedIds = Array.from(selectedItems)
     const selectedItemsData = data.filter(item => selectedItems.has(item[idKey] as string))
 
-    // Optimistically update UI - pass empty array to indicate delete action
-    onOptimisticUpdate([])
+    // Optimistically update UI for delete action
+    onOptimisticUpdate(selectedItemsData, 'delete')
     clearSelection()
 
     let isUndone = false
@@ -62,7 +62,7 @@ export function useBulkDelete<T extends Record<string, any>>({
       clearTimeout(timeoutId)
       clearInterval(countdownInterval)
       toast.dismiss(toastId)
-      onOptimisticUpdate(selectedItemsData)
+      onOptimisticUpdate(selectedItemsData, 'undo')
       toast.success("Deletion cancelled")
     }
 

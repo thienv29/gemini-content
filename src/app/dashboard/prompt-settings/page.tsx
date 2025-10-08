@@ -174,29 +174,22 @@ export default function PromptSettingsPage() {
   }, [fetchPromptSettings])
 
   const handleDelete = (setting: PromptSetting) => {
-    // Optimistically remove from UI
-    setPromptSettings(prev => prev.filter(s => s.id !== setting.id))
+    // Temporarily select this single item
+    bulkDelete.handleSelectItem(setting.id, true)
 
-    // Delete from backend after a delay (if not undone)
-    const timeoutId = setTimeout(async () => {
-      try {
-        await axios.delete(`/api/prompt-settings/${setting.id}`)
-      } catch (error) {
-        console.error('Error deleting prompt setting:', error)
+    // Call the same bulk delete handler
+    bulkDelete.handleBulkDelete((selectedSettingsData: PromptSetting[], action: 'delete' | 'undo') => {
+      if (action === 'delete') {
+        // Optimistic delete: remove the item from UI
+        setPromptSettings(prev => prev.filter(s => s.id !== setting.id))
+      } else if (action === 'undo') {
+        // Undo: add back the item
+        setPromptSettings(prev => [...prev, ...selectedSettingsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
       }
-    }, 3000) // 3 seconds delay
-
-    toast(`Prompt setting "${setting.name}" deleted`, {
-      action: {
-        label: "Undo",
-        onClick: () => {
-          // Cancel the delete and restore the setting in UI
-          clearTimeout(timeoutId)
-          setPromptSettings(prev => [...prev, setting].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-          toast.success("Deletion cancelled")
-        },
-      },
     })
+
+    // Clear the temporary selection
+    bulkDelete.handleSelectItem(setting.id, false)
   }
 
   const handleSearchChange = (value: string) => {
@@ -266,11 +259,11 @@ export default function PromptSettingsPage() {
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={() => bulkDelete.handleBulkDelete((selectedSettingsData: PromptSetting[]) => {
-                  if (selectedSettingsData.length > 0) {
-                    setPromptSettings(prev => [...prev, ...selectedSettingsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-                  } else {
+                onClick={() => bulkDelete.handleBulkDelete((selectedSettingsData: PromptSetting[], action: 'delete' | 'undo') => {
+                  if (action === 'delete') {
                     setPromptSettings(prev => prev.filter(s => !bulkDelete.selectedItems.has(s.id)))
+                  } else if (action === 'undo') {
+                    setPromptSettings(prev => [...prev, ...selectedSettingsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
                   }
                 })}
               >
