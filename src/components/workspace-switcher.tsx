@@ -95,6 +95,8 @@ export function WorkspaceSwitcher({
   }
 
   const handleDeleteTenant = async (workspace: Workspace) => {
+    const isDeletingActiveWorkspace = workspace.id === user?.activeTenantId
+
     confirm({
       title: "Delete workspace",
       description: `Are you sure you want to delete "${workspace.name}"? This action cannot be undone and will remove all associated prompts, settings, and user access.`,
@@ -103,6 +105,15 @@ export function WorkspaceSwitcher({
       onConfirm: async () => {
         try {
           await axios.delete(`/api/tenants/${workspace.id}`)
+
+          // If we deleted the active workspace, switch to another workspace
+          if (isDeletingActiveWorkspace) {
+            const remainingWorkspaces = workspaces.filter(w => w.id !== workspace.id)
+            if (remainingWorkspaces.length > 0) {
+              await handleSwitchWorkspace(remainingWorkspaces[0].id)
+            }
+          }
+
           onRefresh?.()
         } catch (error) {
           console.error('Failed to delete workspace:', error)
