@@ -45,11 +45,13 @@ export function useBulkDelete<T extends Record<string, any>>({
     setSelectedItems(new Set())
   }, [])
 
-  const handleBulkDelete = useCallback((onOptimisticUpdate: (selectedItems: T[], action: 'delete' | 'undo') => void, onSuccess?: () => void) => {
-    const selectedIds = Array.from(selectedItems)
-    const selectedItemsData = data.filter(item => selectedItems.has(item[idKey] as string))
+  const handleBulkDelete = useCallback((onOptimisticUpdate: (selectedItems: T[], action: 'delete' | 'undo') => void, onSuccess?: () => void, forcedSelectedIds?: string[]) => {
+    const selectedIds = forcedSelectedIds || Array.from(selectedItems)
+    const selectedItemsData = data.filter(item => (forcedSelectedIds ? forcedSelectedIds.includes(item[idKey] as string) : selectedItems.has(item[idKey] as string)))
 
-    clearSelection()
+    if (!forcedSelectedIds) {
+      clearSelection()
+    }
     // Optimistically update UI for delete action
     onOptimisticUpdate(selectedItemsData, 'delete')
 

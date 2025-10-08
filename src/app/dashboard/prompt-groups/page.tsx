@@ -181,10 +181,6 @@ export default function PromptGroupsPage() {
   }, [debouncedSearch])
 
   const handleDelete = (group: PromptGroup) => {
-    // Temporarily select this single item
-    bulkDelete.handleSelectItem(group.id, true)
-
-    // Call the same bulk delete handler
     bulkDelete.handleBulkDelete((selectedGroupsData: PromptGroup[], action: 'delete' | 'undo') => {
       if (action === 'delete') {
         // Optimistic delete: remove the item from UI
@@ -193,10 +189,7 @@ export default function PromptGroupsPage() {
         // Undo: add back the item
         setPromptGroups(prev => [...prev, ...selectedGroupsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
       }
-    })
-
-    // Clear the temporary selection
-    bulkDelete.handleSelectItem(group.id, false)
+    }, fetchPromptGroups, [group.id])
   }
 
 
