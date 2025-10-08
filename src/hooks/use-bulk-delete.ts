@@ -45,13 +45,13 @@ export function useBulkDelete<T extends Record<string, any>>({
     setSelectedItems(new Set())
   }, [])
 
-  const handleBulkDelete = useCallback((onOptimisticUpdate: (selectedItems: T[], action: 'delete' | 'undo') => void) => {
+  const handleBulkDelete = useCallback((onOptimisticUpdate: (selectedItems: T[], action: 'delete' | 'undo') => void, onSuccess?: () => void) => {
     const selectedIds = Array.from(selectedItems)
     const selectedItemsData = data.filter(item => selectedItems.has(item[idKey] as string))
 
+    clearSelection()
     // Optimistically update UI for delete action
     onOptimisticUpdate(selectedItemsData, 'delete')
-    clearSelection()
 
     let isUndone = false
     const delay = 5000 // 5 seconds
@@ -109,6 +109,8 @@ export function useBulkDelete<T extends Record<string, any>>({
       } catch (error) {
         console.error(`Error bulk deleting ${entityName}s:`, error)
         toast.error(`Failed to delete ${entityName}s`)
+        // Revert optimistic update on failure
+        onOptimisticUpdate(selectedItemsData, 'undo')
       }
     }, delay)
   }, [selectedItems, data, idKey, apiPath, entityName, onSuccess, clearSelection])

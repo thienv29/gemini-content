@@ -273,13 +273,16 @@ export default function PromptGroupsPage() {
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={() => bulkDelete.handleBulkDelete((selectedGroupsData: PromptGroup[], action: 'delete' | 'undo') => {
-                  if (action === 'delete') {
-                    setPromptGroups(prev => prev.filter(g => !bulkDelete.selectedItems.has(g.id)))
-                  } else if (action === 'undo') {
-                    setPromptGroups(prev => [...prev, ...selectedGroupsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-                  }
-                })}
+                onClick={() => bulkDelete.handleBulkDelete(
+                  (selectedGroupsData: PromptGroup[], action: 'delete' | 'undo') => {
+                    if (action === 'delete') {
+                      setPromptGroups(prev => prev.filter(g => !bulkDelete.selectedItems.has(g.id)))
+                    } else if (action === 'undo') {
+                      setPromptGroups(prev => [...prev, ...selectedGroupsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+                    }
+                  },
+                  fetchPromptGroups
+                )}
               >
                 <Trash className="h-4 w-4 mr-2" />
                 Delete Selected ({bulkDelete.selectedCount})

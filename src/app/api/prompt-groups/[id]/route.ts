@@ -107,6 +107,30 @@ export async function DELETE(
     const tenantId = await getTenantId(request)
     const { id } = await params
 
+    // First, check if the group exists and belongs to the tenant
+    const existingGroup = await prisma.promptGroup.findFirst({
+      where: {
+        id,
+        tenantId
+      },
+      include: {
+        _count: {
+          select: { prompts: true }
+        }
+      }
+    })
+
+    if (!existingGroup) {
+      return NextResponse.json({ error: 'Prompt group not found' }, { status: 404 })
+    }
+
+    // Check if the group contains any prompts
+    if (existingGroup._count.prompts > 0) {
+      return NextResponse.json({
+        error: `Cannot delete prompt group "${existingGroup.name}" that contains ${existingGroup._count.prompts} prompts`
+      }, { status: 400 })
+    }
+
     const promptGroup = await prisma.promptGroup.deleteMany({
       where: {
         id,

@@ -31,9 +31,15 @@ export async function handleBulkDelete({ table, entityName, request }: BulkDelet
       }
     })
 
+    // Check if all requested items were actually deleted
+    if (result.count !== ids.length) {
+      console.warn(`Bulk delete warning: Requested ${ids.length} deletions but only ${result.count} were performed for ${entityName}s`)
+    }
+
     return NextResponse.json({
       message: `${result.count} ${entityName}s deleted successfully`,
-      deletedCount: result.count
+      deletedCount: result.count,
+      requestedCount: ids.length
     })
   } catch (error) {
     console.error(`Error bulk deleting ${entityName}s:`, error)

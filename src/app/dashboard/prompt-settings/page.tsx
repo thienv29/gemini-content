@@ -259,13 +259,16 @@ export default function PromptSettingsPage() {
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={() => bulkDelete.handleBulkDelete((selectedSettingsData: PromptSetting[], action: 'delete' | 'undo') => {
-                  if (action === 'delete') {
-                    setPromptSettings(prev => prev.filter(s => !bulkDelete.selectedItems.has(s.id)))
-                  } else if (action === 'undo') {
-                    setPromptSettings(prev => [...prev, ...selectedSettingsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-                  }
-                })}
+                onClick={() => bulkDelete.handleBulkDelete(
+                  (selectedSettingsData: PromptSetting[], action: 'delete' | 'undo') => {
+                    if (action === 'delete') {
+                      setPromptSettings(prev => prev.filter(s => !bulkDelete.selectedItems.has(s.id)))
+                    } else if (action === 'undo') {
+                      setPromptSettings(prev => [...prev, ...selectedSettingsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+                    }
+                  },
+                  fetchPromptSettings
+                )}
               >
                 <Trash className="h-4 w-4 mr-2" />
                 Delete Selected ({bulkDelete.selectedCount})

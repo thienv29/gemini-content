@@ -254,15 +254,18 @@ export default function PromptsPage() {
   }
 
   const handleBulkDelete = () => {
-    bulkDelete.handleBulkDelete((selectedPromptsData: Prompt[], action: 'delete' | 'undo') => {
-      if (action === 'delete') {
-        // Optimistic delete: remove selected items from UI
-        setPrompts(prev => prev.filter(p => !bulkDelete.selectedItems.has(p.id)))
-      } else if (action === 'undo') {
-        // Undo: add back the selected items
-        setPrompts(prev => [...prev, ...selectedPromptsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
-      }
-    })
+    bulkDelete.handleBulkDelete(
+      (selectedPromptsData: Prompt[], action: 'delete' | 'undo') => {
+        if (action === 'delete') {
+          // Optimistic delete: remove selected items from UI
+          setPrompts(prev => prev.filter(p => !bulkDelete.selectedItems.has(p.id)))
+        } else if (action === 'undo') {
+          // Undo: add back the selected items
+          setPrompts(prev => [...prev, ...selectedPromptsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+        }
+      },
+      fetchPrompts
+    )
   }
 
 
