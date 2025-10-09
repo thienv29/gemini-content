@@ -52,6 +52,22 @@ export function NavMain({
       <SidebarMenu>
         {items.map((item) => {
           const isGroupActive = getIsGroupActive(item)
+
+          // If no sub items, render as direct link
+          if (!item.items || item.items.length === 0) {
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton tooltip={item.title} asChild isActive={pathname === item.url}>
+                  <Link href={item.url}>
+                    {item.icon && <item.icon />}
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          }
+
+          // Otherwise render as collapsible group
           return (
             <Collapsible
               key={item.title}
@@ -69,7 +85,7 @@ export function NavMain({
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub>
-                    {item.items?.map((subItem) => {
+                    {item.items.map((subItem) => {
                       const isSubItemActive = getIsSubItemActive(subItem.url)
                       return (
                         <SidebarMenuSubItem key={subItem.title}>

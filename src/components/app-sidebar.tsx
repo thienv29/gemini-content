@@ -50,19 +50,9 @@ const data = {
       ],
     },
     {
-      title: "Files",
-      url: "#",
+      title: "Media",
+      url: "/dashboard/uploads",
       icon: Upload,
-      items: [
-        {
-          title: "File Manager",
-          url: "/dashboard/uploads",
-        },
-        {
-          title: "Test Suite",
-          url: "/dashboard/test",
-        },
-      ],
     },
     {
       title: "Playground",
