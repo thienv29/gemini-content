@@ -32,7 +32,8 @@ import { Checkbox } from '@/components/ui/checkbox'
     FileCode,
     FileArchive,
     FileSpreadsheet,
-    Search
+    Search,
+    RefreshCw
   } from 'lucide-react'
 import {
   Dialog,
@@ -171,6 +172,9 @@ export default function UploadsPage() {
   }
 
   const handleDoubleClick = (item: FileItem) => {
+    // Clear selection first
+    setSelectedFiles(new Set())
+
     if (item.type === 'folder') {
       // Navigate into folder on double-click
       navigateToFolder(item.path)
@@ -236,8 +240,23 @@ export default function UploadsPage() {
 
     setUploadItems(prev => [...prev, ...newUploadItems])
 
-    for (const item of newUploadItems) {
-      await uploadFileItem(item, targetFolderPath)
+    const uploadPromises = newUploadItems.map(item => uploadFileItem(item, targetFolderPath))
+    await Promise.all(uploadPromises)
+
+    // Only refresh if files were uploaded to the current directory
+    const uploadPath = targetFolderPath || currentPath
+    if (uploadPath === currentPath) {
+      // Get the final status of the uploaded items
+      setUploadItems(currentItems => {
+        const uploadedIds = newUploadItems.map(item => item.id)
+        const hasSuccessfulUploads = uploadedIds.some(id =>
+          currentItems.find(item => item.id === id)?.status === 'completed'
+        )
+        if (hasSuccessfulUploads) {
+          fetchFiles()
+        }
+        return currentItems
+      })
     }
   }
 
@@ -305,8 +324,6 @@ export default function UploadsPage() {
         duration: 3000,
         id: toastId,
       })
-
-      fetchFiles() // Refresh to show new files
     } catch (error) {
       setUploadItems(prev =>
         prev.map(upload => upload.id === item.id
@@ -656,6 +673,69 @@ export default function UploadsPage() {
 
   const breadcrumbs = currentPath.split('/').filter(Boolean)
 
+  const renderBreadcrumbs = () => {
+    if (currentPath.startsWith('/.trash')) {
+      // In trash, show breadcrumbs within trash
+      const trashBreadcrumbs = breadcrumbs.slice(1) // Remove .trash from display
+      return (
+        <div className='flex items-center justify-between w-full'>
+          <div className='flex items-center'>
+            <button
+              onClick={() => navigateToFolder('/')}
+              className="hover:text-foreground transition-colors"
+            >
+              Home
+            </button>
+            <ChevronRight className="w-4 h-4 mx-1" />
+            <span className="text-orange-600">🗑️ Trash</span>
+            {trashBreadcrumbs.map((crumb, index) => (
+              <span key={index} className="flex items-center">
+                <ChevronRight className="w-4 h-4 mx-1" />
+                <button
+                  onClick={() => navigateToFolder('/.trash/' + trashBreadcrumbs.slice(0, index + 1).join('/'))}
+                  className="hover:text-foreground transition-colors"
+                >
+                  {crumb}
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )
+    } else {
+      // Normal breadcrumbs with trash link
+      return (
+        <div className='flex items-center justify-between w-full'>
+          <div className='flex items-center'>
+            <button
+              onClick={() => navigateToFolder('/')}
+              className="hover:text-foreground transition-colors"
+            >
+              Home
+            </button>
+            {breadcrumbs.map((crumb, index) => (
+              <span key={index} className="flex items-center">
+                <ChevronRight className="w-4 h-4 mx-1" />
+                <button
+                  onClick={() => navigateToFolder('/' + breadcrumbs.slice(0, index + 1).join('/'))}
+                  className="hover:text-foreground transition-colors"
+                >
+                  {crumb}
+                </button>
+              </span>
+            ))}
+          </div>
+          <button
+            onClick={() => navigateToFolder('/.trash')}
+            className="hover:text-foreground transition-colors text-orange-600"
+          >
+            🗑️ Trash
+          </button>
+        </div>
+      )
+    }
+  }
+
   return (
     <div className="container mx-auto py-6">
       <div className="grid grid-cols-1 gap-6">
@@ -664,26 +744,8 @@ export default function UploadsPage() {
           <Card>
             <CardHeader>
               {/* Breadcrumb Navigation and Selected Files Actions */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <button
-                    onClick={() => navigateToFolder('/')}
-                    className="hover:text-foreground transition-colors"
-                  >
-                    Home
-                  </button>
-                  {breadcrumbs.map((crumb, index) => (
-                    <span key={index} className="flex items-center">
-                      <ChevronRight className="w-4 h-4 mx-1" />
-                      <button
-                        onClick={() => navigateToFolder('/' + breadcrumbs.slice(0, index + 1).join('/'))}
-                        className="hover:text-foreground transition-colors"
-                      >
-                        {crumb}
-                      </button>
-                    </span>
-                  ))}
-                </div>
+              <div className="flex items-center justify-between mb-4 w-full">
+                  {renderBreadcrumbs()}
                 {selectedFiles.size > 0 && (
                   <div className="flex items-center gap-2">
                     <Button
@@ -770,6 +832,16 @@ export default function UploadsPage() {
                       </Button>
                     )}
                   </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchFiles()}
+                    disabled={loading}
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  </Button>
+
                   <div className="flex items-center gap-2">
                   {/* View Mode Controls */}
                   <div className="flex items-center border rounded-lg">

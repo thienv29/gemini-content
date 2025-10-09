@@ -29,16 +29,30 @@ export async function GET(request: NextRequest) {
     const tenantDir = path.join(UPLOADS_DIR, tenantId)
     const fullPath = path.join(tenantDir, relativePath === '/' ? '' : relativePath)
 
-    // Ensure the directory exists
+    // Ensure the directory exists (allow accessing trash directly)
     try {
       await fs.access(fullPath)
     } catch {
+      // Special case: allow creating/accessing trash directory
+      if (relativePath === '/.trash') {
+        try {
+          await fs.mkdir(fullPath, { recursive: true })
+          return NextResponse.json({ files: [] }, { status: 200 })
+        } catch {
+          return NextResponse.json({ files: [] }, { status: 200 })
+        }
+      }
       return NextResponse.json({ files: [] }, { status: 200 })
     }
 
     const entries = await fs.readdir(fullPath, { withFileTypes: true })
     const files = await Promise.all(
       entries.map(async (entry) => {
+        // Skip the trash directory in normal listings (but show it if directly navigating to it)
+        if (entry.name === TRASH_DIR_NAME && relativePath !== '/' + TRASH_DIR_NAME) {
+          return null
+        }
+
         const filePath = path.join(fullPath, entry.name)
         const relativeEntryPath = path.join(relativePath, entry.name)
 
@@ -139,7 +153,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE /api/uploads?path=/some/path - Delete file/directory
+const TRASH_DIR_NAME = '.trash'
+
+// DELETE /api/uploads?path=/some/path - Move to trash or permanently delete if in trash
 export async function DELETE(request: NextRequest) {
   try {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
@@ -167,13 +183,44 @@ export async function DELETE(request: NextRequest) {
 
     const stats = await fs.stat(fullPath)
 
-    if (stats.isDirectory()) {
-      await fs.rm(fullPath, { recursive: true })
-    } else {
-      await fs.unlink(fullPath)
-    }
+    // Check if we're in trash folder
+    const normalizedTargetPath = targetPath.startsWith('/') ? targetPath.slice(1) : targetPath
+    const inTrash = normalizedTargetPath.startsWith(TRASH_DIR_NAME)
 
-    return NextResponse.json({ message: 'File deleted successfully' }, { status: 200 })
+    if (inTrash) {
+      // Permanently delete if in trash
+      if (stats.isDirectory()) {
+        await fs.rm(fullPath, { recursive: true })
+      } else {
+        await fs.unlink(fullPath)
+      }
+      return NextResponse.json({ message: 'File permanently deleted' }, { status: 200 })
+    } else {
+      // Move to trash
+      const trashDir = path.join(tenantDir, TRASH_DIR_NAME)
+      await fs.mkdir(trashDir, { recursive: true })
+
+      const fileName = path.basename(fullPath)
+      let trashPath = path.join(trashDir, fileName)
+
+      // Handle name conflicts in trash
+      let counter = 1
+      while (true) {
+        try {
+          await fs.access(trashPath)
+          // File exists, create new name
+          const parsedPath = path.parse(fileName)
+          trashPath = path.join(trashDir, `${parsedPath.name}_${counter}${parsedPath.ext}`)
+          counter++
+        } catch {
+          // File doesn't exist, safe to use
+          break
+        }
+      }
+
+      await fs.rename(fullPath, trashPath)
+      return NextResponse.json({ message: 'File moved to trash' }, { status: 200 })
+    }
 
   } catch (error) {
     console.error('Error deleting file:', error)
