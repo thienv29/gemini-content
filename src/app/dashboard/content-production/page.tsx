@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Play, Wand2, Copy, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
+import { Play, Wand2, Copy, RefreshCw, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
 import axios from "axios"
 import { toast } from "sonner"
 import { Loading } from "@/components/ui/loading"
@@ -288,6 +288,29 @@ export default function ContentProductionPage() {
     setCurrentVersionIndex(index)
   }
 
+  const enhancePrompt = async () => {
+    if (!finalPrompt.trim()) return
+
+    try {
+      setGenerating(true)
+      const enhancePrompt = `Enhance and improve the following prompt to make it more effective for content generation. Make it more specific, actionable, and comprehensive. Return ONLY the enhanced prompt text, nothing else. Original prompt: "${finalPrompt}"`
+
+      const response = await axios.post('/api/content/generate', {
+        customPrompt: enhancePrompt,
+        customModel: "gemini-2.0-flash"
+      })
+
+      const enhancedPrompt = response.data.content.trim()
+      setFinalPrompt(enhancedPrompt)
+      toast.success("Prompt enhanced successfully!")
+    } catch (error) {
+      console.error('Error enhancing prompt:', error)
+      toast.error("Failed to enhance prompt")
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   if (loading) {
     return <Loading className="top-16"/>
   }
@@ -307,7 +330,7 @@ export default function ContentProductionPage() {
               {/* Quick Actions */}
               <div className="space-y-3">
                 <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  Quick Start
+                  Templates
                 </h3>
                 <Button
                   variant="outline"
@@ -315,15 +338,7 @@ export default function ContentProductionPage() {
                   onClick={openPromptDialog}
                 >
                   <Wand2 className="w-4 h-4 mr-2" />
-                  Use Template
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => setFinalPrompt("")}
-                >
-                  <Copy className="w-4 h-4 mr-2" />
-                  Write Custom Prompt
+                  Browse Templates
                 </Button>
               </div>
 
@@ -334,9 +349,23 @@ export default function ContentProductionPage() {
 
                 {/* Prompt Input */}
                 <div className="space-y-2 mb-6">
-                  <Label htmlFor="prompt-input" className="text-sm">
-                    Your Prompt
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="prompt-input" className="text-sm">
+                      Your Prompt
+                    </Label>
+                    {finalPrompt.trim() && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={enhancePrompt}
+                        disabled={generating}
+                        className="h-6 px-2 text-xs"
+                      >
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        Enhance
+                      </Button>
+                    )}
+                  </div>
                   <Textarea
                     id="prompt-input"
                     value={finalPrompt}
