@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -9,10 +9,11 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Play, Wand2, Copy, RefreshCw, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
+import { Play, Wand2, Copy, RefreshCw, ChevronLeft, ChevronRight, Sparkles, Eye, Code } from "lucide-react"
 import axios from "axios"
 import { toast } from "sonner"
 import { Loading } from "@/components/ui/loading"
+import { formatForPlatform, mdToHtml } from "@/lib/post-formater"
 
 interface Prompt {
   id: string
@@ -67,6 +68,31 @@ export default function ContentProductionPage() {
   // Form states for generation
   const [selectedPromptSetting, setSelectedPromptSetting] = useState<string>("none")
   const [customModel, setCustomModel] = useState("gemini-2.0-flash")
+
+  // Content format state
+  const [selectedFormat, setSelectedFormat] = useState<string>("original")
+
+  // HTML preview mode
+  const [htmlPreviewMode, setHtmlPreviewMode] = useState<boolean>(false)
+
+  // Format content based on selected format
+  const formattedContent = useMemo(() => {
+    if (!generatedContent[currentVersionIndex]) return ""
+
+    const currentContent = generatedContent[currentVersionIndex]
+    switch (selectedFormat) {
+      case "facebook":
+      case "zalo":
+      case "linkedin":
+      case "twitter":
+        return formatForPlatform(currentContent.content, selectedFormat as any)
+      case "html":
+        return mdToHtml(currentContent.content)
+      case "original":
+      default:
+        return currentContent.content
+    }
+  }, [generatedContent, currentVersionIndex, selectedFormat])
 
   const fetchPrompts = useCallback(async () => {
     try {
@@ -319,6 +345,10 @@ export default function ContentProductionPage() {
   const selectedSettingObj = promptSettings.find(p => p.id === dialogSelectedSetting)
   const currentContent = generatedContent[currentVersionIndex]
 
+  // Content to display and copy (formatted or original)
+  const displayContent = formattedContent
+  const copyContent = formattedContent
+
   return (
     <div className="flex flex-col h-[90vh]">
       {/* Main Content */}
@@ -421,47 +451,93 @@ export default function ContentProductionPage() {
 
         {/* Right Panel - Results */}
         <div className="flex-1 bg-background flex flex-col">
-          <div className="border-b p-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">
-              Generated Content
-              {generatedContent.length > 0 && (
-                <span className="ml-2 text-sm text-muted-foreground">
-                  ({currentVersionIndex + 1} of {generatedContent.length})
-                </span>
-              )}
-            </h2>
-            {generatedContent.length > 1 && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigateVersion('prev')}
-                  disabled={generatedContent.length <= 1}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <div className="flex gap-1">
-                  {generatedContent.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => goToVersion(index)}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        index === currentVersionIndex
-                          ? 'bg-primary'
-                          : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
-                      }`}
-                      title={`Version ${index + 1}`}
-                    />
-                  ))}
+          <div className="border-b p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">
+                Generated Content
+                {generatedContent.length > 0 && (
+                  <span className="ml-2 text-sm text-muted-foreground">
+                    ({currentVersionIndex + 1} of {generatedContent.length})
+                  </span>
+                )}
+              </h2>
+              {generatedContent.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigateVersion('prev')}
+                    disabled={generatedContent.length <= 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <div className="flex gap-1">
+                    {generatedContent.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => goToVersion(index)}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          index === currentVersionIndex
+                            ? 'bg-primary'
+                            : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                        }`}
+                        title={`Version ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigateVersion('next')}
+                    disabled={generatedContent.length <= 1}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigateVersion('next')}
-                  disabled={generatedContent.length <= 1}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+              )}
+            </div>
+            {generatedContent.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Format:</Label>
+                <Select value={selectedFormat} onValueChange={(format) => {
+                  setSelectedFormat(format)
+                  // Reset HTML preview mode when changing formats
+                  if (format !== "html") {
+                    setHtmlPreviewMode(false)
+                  }
+                }}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="original">Original</SelectItem>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="zalo">Zalo</SelectItem>
+                    <SelectItem value="linkedin">LinkedIn</SelectItem>
+                    <SelectItem value="twitter">Twitter</SelectItem>
+                    <SelectItem value="html">HTML</SelectItem>
+                  </SelectContent>
+                </Select>
+                {selectedFormat === "html" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setHtmlPreviewMode(!htmlPreviewMode)}
+                    className="ml-2"
+                  >
+                    {htmlPreviewMode ? (
+                      <>
+                        <Code className="w-4 h-4 mr-1" />
+                        View Source
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-4 h-4 mr-1" />
+                        Preview
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -492,7 +568,7 @@ export default function ContentProductionPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => copyToClipboard(currentContent.content)}
+                        onClick={() => copyToClipboard(copyContent)}
                       >
                         <Copy className="w-4 h-4 mr-1" />
                         Copy
@@ -513,9 +589,16 @@ export default function ContentProductionPage() {
 
                     {/* Content */}
                     <div className="bg-muted/30 rounded-lg p-6">
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                        {currentContent.content}
-                      </div>
+                      {selectedFormat === "html" && htmlPreviewMode ? (
+                        <div
+                          className="prose prose-sm max-w-none text-sm leading-relaxed dark:prose-invert"
+                          dangerouslySetInnerHTML={{ __html: displayContent }}
+                        />
+                      ) : (
+                        <div className={selectedFormat === "html" ? "text-sm leading-relaxed whitespace-pre-wrap" : "whitespace-pre-wrap text-sm leading-relaxed"}>
+                          {displayContent}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
