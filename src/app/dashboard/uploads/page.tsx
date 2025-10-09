@@ -1123,9 +1123,6 @@ export default function UploadsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Toast notifications for uploads */}
-      <Toaster />
     </div>
   )
 }
