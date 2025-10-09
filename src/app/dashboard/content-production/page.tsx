@@ -298,19 +298,6 @@ export default function ContentProductionPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between p-6 pb-4 border-b">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Content Production</h1>
-          <p className="text-muted-foreground mt-1">
-            Generate high-quality content with AI
-          </p>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          {generatedContent.length} generations saved
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel - Creation */}
@@ -464,7 +451,7 @@ export default function ContentProductionPage() {
             ) : (
               <div className="p-6 space-y-6 overflow-y-auto h-full">
                 {currentContent && (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {/* Header with metadata */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -483,13 +470,6 @@ export default function ContentProductionPage() {
                       </Button>
                     </div>
 
-                    {/* Content */}
-                    <div className="bg-muted/30 rounded-lg p-6">
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                        {currentContent.content}
-                      </div>
-                    </div>
-
                     {/* Prompt used (collapsible) */}
                     {currentContent.promptUsed && (
                       <details className="text-xs">
@@ -501,6 +481,13 @@ export default function ContentProductionPage() {
                         </pre>
                       </details>
                     )}
+
+                    {/* Content */}
+                    <div className="bg-muted/30 rounded-lg p-6">
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                        {currentContent.content}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

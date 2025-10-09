@@ -21,6 +21,7 @@ const navigationMapping: NavigationMapping = {
   "/dashboard/prompt-groups": { title: "Groups" },
   "/dashboard/prompt-settings": { title: "Settings" },
   "/dashboard/uploads": { title: "Media" },
+  "/dashboard/content-production": { title: "Content Production" },
 }
 
 export function DynamicBreadcrumb() {
