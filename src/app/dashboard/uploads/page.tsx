@@ -663,25 +663,64 @@ export default function UploadsPage() {
         <div className="w-full">
           <Card>
             <CardHeader>
-              {/* Breadcrumb Navigation */}
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
-                <button
-                  onClick={() => navigateToFolder('/')}
-                  className="hover:text-foreground transition-colors"
-                >
-                  Home
-                </button>
-                {breadcrumbs.map((crumb, index) => (
-                  <span key={index} className="flex items-center">
-                    <ChevronRight className="w-4 h-4 mx-1" />
-                    <button
-                      onClick={() => navigateToFolder('/' + breadcrumbs.slice(0, index + 1).join('/'))}
-                      className="hover:text-foreground transition-colors"
+              {/* Breadcrumb Navigation and Selected Files Actions */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <button
+                    onClick={() => navigateToFolder('/')}
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Home
+                  </button>
+                  {breadcrumbs.map((crumb, index) => (
+                    <span key={index} className="flex items-center">
+                      <ChevronRight className="w-4 h-4 mx-1" />
+                      <button
+                        onClick={() => navigateToFolder('/' + breadcrumbs.slice(0, index + 1).join('/'))}
+                        className="hover:text-foreground transition-colors"
+                      >
+                        {crumb}
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                {selectedFiles.size > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDownloadSelected}
                     >
-                      {crumb}
-                    </button>
-                  </span>
-                ))}
+                      <Download className="w-4 h-4 mr-2" />
+                      Download ({selectedFiles.size})
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete ({selectedFiles.size})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Files</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete {selectedFiles.size} selected files? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDeleteSelected}
+                            className="bg-destructive hover:bg-destructive/90"
+                          >
+                            Delete All
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between">
@@ -759,44 +798,6 @@ export default function UploadsPage() {
                       <AlignJustify className="w-4 h-4" />
                     </Button>
                   </div>
-
-                  {selectedFiles.size > 0 && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleDownloadSelected}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download ({selectedFiles.size})
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete ({selectedFiles.size})
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Files</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete {selectedFiles.size} selected files? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={handleDeleteSelected}
-                              className="bg-destructive hover:bg-destructive/90"
-                            >
-                              Delete All
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </>
-                  )}
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
