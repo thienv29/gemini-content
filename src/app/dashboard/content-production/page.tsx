@@ -221,7 +221,7 @@ export default function ContentProductionPage() {
         })
 
         mergedContent += promptContent
-        if (index < collectedPrompts.length - 1) mergedContent += "\n\n"
+        if (index < collectedPrompts.length - 1) mergedContent += "\n"
       })
 
       setFinalPrompt(mergedContent)
