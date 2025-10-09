@@ -914,12 +914,12 @@ export default function UploadsPage() {
                     <Spinner />
                   </div>
                 ) : (
-                  <div className="h-full overflow-auto">
+                  <div className="h-full overflow-auto relative">
                   {files.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Folder className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                      <p>No files in this directory</p>
-                      <p className="text-sm">Upload some files to get started</p>
+                    <div className="flex flex-col items-center justify-center absolute inset-0 text-muted-foreground">
+                      <Folder className="w-16 h-16 mb-4 opacity-50" />
+                      <p className="text-lg font-medium mb-2">No files in this directory</p>
+                      <p className="text-sm text-center">Drag & drop files here to upload, or click the Upload button above</p>
                     </div>
                   ) : (
                     <>
