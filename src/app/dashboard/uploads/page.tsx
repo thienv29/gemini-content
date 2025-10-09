@@ -811,11 +811,7 @@ export default function UploadsPage() {
                         <File className="w-4 h-4 mr-2" />
                         Upload Files
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {
-                        // For folder upload, we need to show instructions
-                        // since browsers don't allow programmatic folder picker opening
-                        toast.info('Use drag & drop to upload folders, or click "Choose Files" and select a folder')
-                      }}>
+                      <DropdownMenuItem onClick={() => folderInputRef.current?.click()}>
                         <Folder className="w-4 h-4 mr-2" />
                         Upload Folder
                       </DropdownMenuItem>
