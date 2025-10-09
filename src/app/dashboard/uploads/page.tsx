@@ -658,33 +658,32 @@ export default function UploadsPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <div className="mb-6">
-        <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
-          <button
-            onClick={() => navigateToFolder('/')}
-            className="hover:text-foreground transition-colors"
-          >
-            Home
-          </button>
-          {breadcrumbs.map((crumb, index) => (
-            <span key={index} className="flex items-center">
-              <ChevronRight className="w-4 h-4 mx-1" />
-              <button
-                onClick={() => navigateToFolder('/' + breadcrumbs.slice(0, index + 1).join('/'))}
-                className="hover:text-foreground transition-colors"
-              >
-                {crumb}
-              </button>
-            </span>
-          ))}
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 gap-6">
         {/* Main File Explorer */}
         <div className="w-full">
           <Card>
             <CardHeader>
+              {/* Breadcrumb Navigation */}
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
+                <button
+                  onClick={() => navigateToFolder('/')}
+                  className="hover:text-foreground transition-colors"
+                >
+                  Home
+                </button>
+                {breadcrumbs.map((crumb, index) => (
+                  <span key={index} className="flex items-center">
+                    <ChevronRight className="w-4 h-4 mx-1" />
+                    <button
+                      onClick={() => navigateToFolder('/' + breadcrumbs.slice(0, index + 1).join('/'))}
+                      className="hover:text-foreground transition-colors"
+                    >
+                      {crumb}
+                    </button>
+                  </span>
+                ))}
+              </div>
+
               <div className="flex items-center justify-between">
                 <CardTitle>Files ({selectedFiles.size} of {files.length} selected) </CardTitle>
                 <div className="flex items-center gap-4">
