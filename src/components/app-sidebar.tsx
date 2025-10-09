@@ -47,6 +47,10 @@ const data = {
           title: "Settings",
           url: "/dashboard/prompt-settings",
         },
+        {
+          title: "Content Production",
+          url: "/dashboard/content-production",
+        },
       ],
     },
     {
