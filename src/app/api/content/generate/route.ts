@@ -60,12 +60,12 @@ export async function POST(request: NextRequest) {
           model = customModel
         } else {
           // Fallback to default
-          model = "gemini-2.0-flash-exp"
+          model = "gemini-2.0-flash"
         }
       }
     } else {
       // No setting selected, use custom model or default
-      model = customModel !== "auto" ? customModel : "gemini-2.0-flash-exp"
+      model = customModel !== "auto" ? customModel : "gemini-2.0-flash"
     }
 
     // Generate content using the new GoogleGenAI client
