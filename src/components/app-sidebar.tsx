@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useAuthStore } from "@/stores/auth-store"
 import axios from "axios"
+import { Upload } from "lucide-react"
 
 const data = {
   navMain: [
@@ -45,6 +46,21 @@ const data = {
         {
           title: "Settings",
           url: "/dashboard/prompt-settings",
+        },
+      ],
+    },
+    {
+      title: "Files",
+      url: "#",
+      icon: Upload,
+      items: [
+        {
+          title: "File Manager",
+          url: "/dashboard/uploads",
+        },
+        {
+          title: "Test Suite",
+          url: "/dashboard/test",
         },
       ],
     },
