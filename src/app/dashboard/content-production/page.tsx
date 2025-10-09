@@ -65,7 +65,7 @@ export default function ContentProductionPage() {
 
   // Form states for generation
   const [selectedPromptSetting, setSelectedPromptSetting] = useState<string>("none")
-  const [customModel, setCustomModel] = useState("auto")
+  const [customModel, setCustomModel] = useState("gemini-2.0-flash-exp")
 
   const fetchPrompts = useCallback(async () => {
     try {
@@ -329,7 +329,7 @@ export default function ContentProductionPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Recommended)</SelectItem>
+                  <SelectItem value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Khuyến nghị)</SelectItem>
                   <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
                   <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
                 </SelectContent>
