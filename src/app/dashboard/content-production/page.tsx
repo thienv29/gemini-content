@@ -281,8 +281,8 @@ export default function ContentProductionPage() {
   const selectedSettingObj = promptSettings.find(p => p.id === dialogSelectedSetting)
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6 pt-4">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6 p-6 pt-4 h-[calc(100vh-4rem)]">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Content Production</h1>
           <p className="text-muted-foreground">
@@ -291,108 +291,142 @@ export default function ContentProductionPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Generation Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wand2 className="h-5 w-5" />
-              Tạo Content
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Final Prompt */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <Label className="text-base font-medium">
-                  Prompt:
-                </Label>
-                <Button variant="outline" size="sm" onClick={openPromptDialog}>
-                  Chọn Prompt
-                </Button>
-              </div>
-              <Textarea
-                value={finalPrompt}
-                onChange={(e) => setFinalPrompt(e.target.value)}
-                placeholder="Nhập prompt hoặc chọn từ danh sách..."
-                className="min-h-[200px]"
-              />
-            </div>
-
-            {/* Custom Model Override */}
-            <div className="space-y-4">
-              <Label className="text-base font-medium">
-                Model AI:
-              </Label>
-              <Select value={customModel} onValueChange={setCustomModel}>
-                <SelectTrigger id="model-select">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Khuyến nghị)</SelectItem>
-                  <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
-                  <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Generate Button */}
-            <Button
-              onClick={generateContent}
-              disabled={generating || !finalPrompt.trim()}
-              className="w-full"
-            >
-              <Play className="w-4 h-4 mr-2" />
-              {generating ? "Đang tạo..." : "Tạo Content"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Generation History */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Content đã tạo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {generatedContent.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Wand2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Chưa có content nào</p>
-                <p className="text-sm">Hãy tạo content bằng form bên cạnh</p>
-              </div>
-            ) : (
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 flex-1 min-h-0">
+        {/* Generation Form - Left Column */}
+        <div className="xl:col-span-1">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wand2 className="h-5 w-5" />
+                Tạo Content
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6 h-[calc(100%-5rem)] overflow-y-auto">
+              {/* Final Prompt */}
               <div className="space-y-4">
-                {generatedContent.map((item) => (
-                  <Card key={item.id} className="border-l-4 border-l-primary">
-                    <CardContent className="pt-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 space-y-2">
-                          <div className="text-sm text-muted-foreground">
-                            Tạo lúc {new Date(item.createdAt).toLocaleString()}
+                <div className="flex justify-between items-center">
+                  <Label className="text-base font-medium">
+                    Prompt:
+                  </Label>
+                  <Button variant="outline" size="sm" onClick={openPromptDialog}>
+                    Chọn Prompt
+                  </Button>
+                </div>
+                <Textarea
+                  value={finalPrompt}
+                  onChange={(e) => setFinalPrompt(e.target.value)}
+                  placeholder="Nhập prompt hoặc chọn từ danh sách..."
+                  className="min-h-[150px] resize-none"
+                />
+              </div>
+
+              {/* Custom Model Override */}
+              <div className="space-y-4">
+                <Label className="text-base font-medium">
+                  Model AI:
+                </Label>
+                <Select value={customModel} onValueChange={setCustomModel}>
+                  <SelectTrigger id="model-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Khuyến nghị)</SelectItem>
+                    <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
+                    <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Generate Button */}
+              <Button
+                onClick={generateContent}
+                disabled={generating || !finalPrompt.trim()}
+                className="w-full"
+                size="lg"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                {generating ? "Đang tạo..." : "Tạo Content"}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Content History - Right Column (2 spans) */}
+        <div className="xl:col-span-2">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Copy className="h-5 w-5" />
+                Content History ({generatedContent.length} phiên bản)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="h-[calc(100%-5rem)] overflow-y-auto">
+              {generatedContent.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center py-8 text-muted-foreground">
+                  <Wand2 className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">Chưa có content nào</h3>
+                  <p className="text-sm">Hãy tạo content đầu tiên bằng form bên trái</p>
+                  <div className="mt-4 text-xs text-muted-foreground">
+                    <p>📝 Mỗi lần tạo sẽ lưu phiên bản riêng</p>
+                    <p>📋 Bạn có thể xem và sao chép tất cả phiên bản cũ</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {generatedContent.map((item, index) => (
+                    <Card key={item.id} className="relative">
+                      <div className="absolute top-3 left-3 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full font-medium">
+                        Phiên bản {generatedContent.length - index}
+                      </div>
+                      <CardContent className="pt-12">
+                        <div className="flex items-start justify-between gap-3 mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="text-sm text-muted-foreground">
+                                {new Date(item.createdAt).toLocaleString('vi-VN')}
+                              </div>
+                              <div className="text-xs bg-muted px-2 py-1 rounded">
+                                {item.model}
+                              </div>
+                            </div>
+                            {item.promptUsed && (
+                              <div className="mb-3">
+                                <details className="text-xs">
+                                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                                    Xem prompt đã dùng
+                                  </summary>
+                                  <pre className="mt-2 p-2 bg-muted rounded text-xs whitespace-pre-wrap font-mono">
+                                    {item.promptUsed}
+                                  </pre>
+                                </details>
+                              </div>
+                            )}
                           </div>
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                            {item.content}
-                          </p>
-                          <div className="text-xs text-muted-foreground">
-                            Model: {item.model}
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyToClipboard(item.content)}
+                            >
+                              <Copy className="w-3 h-3 mr-1" />
+                              Copy
+                            </Button>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(item.content)}
-                          className="shrink-0"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
+                        <div className="prose prose-sm max-w-none">
+                          <div className="whitespace-pre-wrap text-sm leading-relaxed border-l-2 border-muted pl-4">
+                            {item.content}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Prompt Selection Dialog */}
