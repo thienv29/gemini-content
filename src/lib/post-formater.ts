@@ -69,11 +69,33 @@ export function mdToHtml(markdown: string): string {
   html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
 
   // Link
-  html = html.replace(/$begin:math:display$(.*?)$end:math:display$$begin:math:text$(.*?)$end:math:text$/g, '<a href="$2" target="_blank">$1</a>');
+  html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>');
 
   // Danh sách
-  html = html.replace(/^- (.*)$/gm, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+  const lines = html.split('\n');
+  let inList = false;
+  const processedLines = lines.map(line => {
+    if (line.trim().startsWith('- ')) {
+      if (!inList) {
+        inList = true;
+        return '<ul><li>' + line.replace(/^-\s*(.*)/, '$1') + '</li>';
+      } else {
+        return '<li>' + line.replace(/^-\s*(.*)/, '$1') + '</li>';
+      }
+    } else {
+      if (inList) {
+        inList = false;
+        return line ? '</ul>' + line : line;
+      }
+      return line;
+    }
+  });
+
+  if (inList) {
+    processedLines[processedLines.length - 1] += '</ul>';
+  }
+
+  html = processedLines.join('\n');
 
   // Code block
   html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
