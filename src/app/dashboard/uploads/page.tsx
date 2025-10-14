@@ -7,21 +7,16 @@ import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { Checkbox } from '@/components/ui/checkbox'
   import {
-    Upload,
     Folder,
     File,
     Trash2,
     Download,
     Plus,
-    FolderOpen,
     ChevronRight,
-    ChevronDown,
     ChevronsUpDown,
     MoreVertical,
     FolderPlus,
-    UploadCloud,
     X,
-    CheckCircle,
     List,
     Grid,
     AlignJustify,
@@ -74,6 +69,14 @@ interface FileItem {
   path: string
 }
 
+interface ImagePreviewState {
+  [key: string]: {
+    loading: boolean
+    error: boolean
+    url?: string
+  }
+}
+
 interface UploadItem {
   id: string
   file: File
@@ -99,6 +102,7 @@ export default function UploadsPage() {
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'icons'>('list')
   const [sortField, setSortField] = useState<SortField>('name')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [imagePreviews, setImagePreviews] = useState<ImagePreviewState>({})
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
@@ -106,6 +110,11 @@ export default function UploadsPage() {
 
   useEffect(() => {
     fetchFiles()
+  }, [currentPath])
+
+  // Clear image previews when switching directories to avoid showing stale previews
+  useEffect(() => {
+    setImagePreviews({})
   }, [currentPath])
 
   // Handle browser back/forward navigation and initial URL hash
@@ -635,6 +644,38 @@ export default function UploadsPage() {
     }
   }
 
+  const isImageFile = (fileName: string) => {
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg']
+    const ext = fileName.split('.').pop()?.toLowerCase()
+    return imageExtensions.includes(ext || '')
+  }
+
+  const loadImagePreview = async (filePath: string) => {
+    if (imagePreviews[filePath]) return // Already loading or loaded
+
+    setImagePreviews(prev => ({
+      ...prev,
+      [filePath]: { loading: true, error: false }
+    }))
+
+    try {
+      const response = await axios.get(`/api/uploads/download?path=${filePath}`, {
+        responseType: 'blob'
+      })
+
+      const url = URL.createObjectURL(response.data)
+      setImagePreviews(prev => ({
+        ...prev,
+        [filePath]: { loading: false, error: false, url }
+      }))
+    } catch (error) {
+      setImagePreviews(prev => ({
+        ...prev,
+        [filePath]: { loading: false, error: true }
+      }))
+    }
+  }
+
   // Sort and filter files
   const sortedAndFilteredFiles = files
     .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -1053,49 +1094,75 @@ export default function UploadsPage() {
                       {viewMode === 'grid' && (
                         <div className="p-4">
                           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                            {sortedAndFilteredFiles.map((item) => (
-                              <div
-                                key={item.id}
-                                className={`border rounded-lg p-4 hover:bg-muted/50 transition-colors cursor-pointer ${
-                                  selectedFiles.has(item.id) ? 'ring-2 ring-primary' : ''
-                                } ${
-                                  item.type === 'folder' && droppedFolderPath === item.path ? 'bg-primary/10 ring-1 ring-primary' : ''
-                                }`}
-                                onDragOver={item.type === 'folder' ? (e) => handleFolderDragOver(e, item.path) : undefined}
-                                onDragLeave={item.type === 'folder' ? handleFolderDragLeave : undefined}
-                                onDrop={item.type === 'folder' ? (e) => handleDrop(e, item.path) : undefined}
-                                onClick={(e) => handleClick(item, e)}
-                                onDoubleClick={() => handleDoubleClick(item)}
-                                onContextMenu={(e) => {
-                                  e.preventDefault()
-                                  // Could add right-click menu here
-                                }}
-                              >
-                                <div className="flex flex-col items-center gap-2">
-                                  <Checkbox
-                                    checked={selectedFiles.has(item.id)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onCheckedChange={() => toggleFileSelection(item.id)}
-                                    className="mb-2"
-                                  />
-                                  {getLargeFileIcon(item.name, item.type)}
-                                  <div className="text-center">
-                                    <p
-                                      className="font-medium text-sm truncate overflow-hidden text-ellipsis whitespace-nowrap"
-                                      title={item.name}
-                                      style={{ maxWidth: '120px' }}
-                                    >
-                                      {item.name}
-                                    </p>
-                                    {item.size !== undefined && (
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        {formatFileSize(item.size)}
-                                      </p>
+                            {sortedAndFilteredFiles.map((item) => {
+                              // Load image preview if it's an image file and in grid view
+                              if (item.type === 'file' && isImageFile(item.name) && !imagePreviews[item.path]) {
+                                loadImagePreview(item.path)
+                              }
+
+                              return (
+                                <div
+                                  key={item.id}
+                                  className={`border rounded-lg p-4 hover:bg-muted/50 transition-colors cursor-pointer ${
+                                    selectedFiles.has(item.id) ? 'ring-2 ring-primary' : ''
+                                  } ${
+                                    item.type === 'folder' && droppedFolderPath === item.path ? 'bg-primary/10 ring-1 ring-primary' : ''
+                                  }`}
+                                  onDragOver={item.type === 'folder' ? (e) => handleFolderDragOver(e, item.path) : undefined}
+                                  onDragLeave={item.type === 'folder' ? handleFolderDragLeave : undefined}
+                                  onDrop={item.type === 'folder' ? (e) => handleDrop(e, item.path) : undefined}
+                                  onClick={(e) => handleClick(item, e)}
+                                  onDoubleClick={() => handleDoubleClick(item)}
+                                  onContextMenu={(e) => {
+                                    e.preventDefault()
+                                    // Could add right-click menu here
+                                  }}
+                                >
+                                  <div className="flex flex-col items-center gap-2">
+                                    <Checkbox
+                                      checked={selectedFiles.has(item.id)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onCheckedChange={() => toggleFileSelection(item.id)}
+                                      className="mb-2"
+                                    />
+                                    {/* Image Preview for Grid View */}
+                                    {item.type === 'file' && isImageFile(item.name) ? (
+                                      <div className="w-16 h-16 flex items-center justify-center bg-muted rounded overflow-hidden">
+                                        {imagePreviews[item.path]?.loading ? (
+                                          <Spinner className="w-6 h-6" />
+                                        ) : imagePreviews[item.path]?.error ? (
+                                          <FileImage className="w-8 h-8 text-muted-foreground" />
+                                        ) : imagePreviews[item.path]?.url ? (
+                                          <img
+                                            src={imagePreviews[item.path].url}
+                                            alt={item.name}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        ) : (
+                                          <FileImage className="w-8 h-8 text-green-500" />
+                                        )}
+                                      </div>
+                                    ) : (
+                                      getLargeFileIcon(item.name, item.type)
                                     )}
+                                    <div className="text-center">
+                                      <p
+                                        className="font-medium text-sm truncate overflow-hidden text-ellipsis whitespace-nowrap"
+                                        title={item.name}
+                                        style={{ maxWidth: '120px' }}
+                                      >
+                                        {item.name}
+                                      </p>
+                                      {item.size !== undefined && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          {formatFileSize(item.size)}
+                                        </p>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              )
+                            })}
                           </div>
                         </div>
                       )}
