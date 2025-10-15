@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
 import { AuthProvider } from "@/core/providers/auth-provider";
+import { ConfirmationProvider } from "@/core/providers/confirmation-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -31,19 +33,21 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SessionProvider>
-          <AuthProvider>
-            <ThemeProvider
-                attribute="class"
-                defaultTheme="system"
-                enableSystem
-                disableTransitionOnChange
-              >
-                {children}
-              </ThemeProvider>
-            <Toaster position="bottom-left" />
-          </AuthProvider>
-        </SessionProvider>
+        <TooltipProvider delayDuration={0}>
+          <SessionProvider>
+            <AuthProvider>
+              <ThemeProvider
+                  attribute="class"
+                  defaultTheme="system"
+                  enableSystem
+                  disableTransitionOnChange
+                >
+                  {children}
+                </ThemeProvider>
+              <Toaster position="bottom-left" />
+            </AuthProvider>
+          </SessionProvider>
+        </TooltipProvider>
       </body>
     </html>
   );

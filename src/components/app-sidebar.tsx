@@ -11,6 +11,7 @@ import {
   Settings2,
   SquareTerminal,
   FileText,
+  QrCode,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -57,6 +58,17 @@ const data = {
       title: "Media",
       url: "/dashboard/uploads",
       icon: Upload,
+    },
+    {
+      title: "Tools",
+      url: "#",
+      icon: QrCode,
+      items: [
+        {
+          title: "QR Code",
+          url: "/dashboard/tools/qrcode",
+        },
+      ],
     },
     {
       title: "Playground",
