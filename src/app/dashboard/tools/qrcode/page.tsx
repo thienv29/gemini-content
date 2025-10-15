@@ -8,10 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
-  Copy,
   Download,
   Share2,
   AlertCircle,
@@ -24,7 +22,6 @@ import {
   User,
   Calendar,
   MapPin,
-  Globe,
   MessageSquare,
   Settings
 } from "lucide-react"
@@ -47,7 +44,7 @@ interface TemplateData {
   type: QRTemplate
   label: string
   description: string
-  icon: React.ComponentType<any>
+  icon: React.ComponentType<{ className?: string }>
   fields: Array<{
     key: string
     label: string
@@ -238,7 +235,7 @@ export default function QrCodeToolPage() {
     large: { width: 400, label: 'Large (400x400)' }
   }
 
-  const getQRCodeOptions = (forStats = false) => ({
+  const getQRCodeOptions = useCallback((forStats = false) => ({
     width: sizeOptions[size].width,
     margin: 2,
     color: {
@@ -246,7 +243,32 @@ export default function QrCodeToolPage() {
       light: '#FFFFFFFF'
     },
     errorCorrectionLevel: errorCorrectionLevel as 'L' | 'M' | 'Q' | 'H'
-  })
+  }), [size, errorCorrectionLevel])
+
+  const generateQRStats = useCallback(async () => {
+    try {
+      // Create QR code to get version and module count
+      const qrCodeOptions = {
+        errorCorrectionLevel: errorCorrectionLevel as 'L' | 'M' | 'Q' | 'H'
+      }
+      const qrCodeData = QRCode.create(text.trim(), qrCodeOptions)
+
+      // Get data length in bits
+      const dataLength = new TextEncoder().encode(text.trim()).length * 8
+
+      const stats: QRStats = {
+        version: qrCodeData.version,
+        dataBits: dataLength,
+        totalBits: qrCodeData.modules.size * qrCodeData.modules.size,
+        size: `${qrCodeData.modules.size}x${qrCodeData.modules.size} modules`
+      }
+
+      setQrStats(stats)
+    } catch (error) {
+      console.error('Error generating stats:', error)
+      setQrStats(null)
+    }
+  }, [text, errorCorrectionLevel])
 
   const generateQRCode = useCallback(async (forStats = false) => {
     if (!text.trim()) {
@@ -282,40 +304,16 @@ export default function QrCodeToolPage() {
       if (!forStats) {
         await generateQRStats()
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to generate QR code. The text might be too long."
       console.error('Error generating QR code:', error)
-      setError(error.message || "Failed to generate QR code. The text might be too long.")
+      setError(errorMessage)
       setQrCodeDataURL("")
       setQrStats(null)
     } finally {
       setLoading(false)
     }
-  }, [text, size, format, errorCorrectionLevel])
-
-  const generateQRStats = async () => {
-    try {
-      // Create QR code to get version and module count
-      const qrCodeOptions = {
-        errorCorrectionLevel: errorCorrectionLevel as 'L' | 'M' | 'Q' | 'H'
-      }
-      const qrCodeData = QRCode.create(text.trim(), qrCodeOptions)
-
-      // Get data length in bits
-      const dataLength = new TextEncoder().encode(text.trim()).length * 8
-
-      const stats: QRStats = {
-        version: qrCodeData.version,
-        dataBits: dataLength,
-        totalBits: qrCodeData.modules.size * qrCodeData.modules.size,
-        size: `${qrCodeData.modules.size}x${qrCodeData.modules.size} modules`
-      }
-
-      setQrStats(stats)
-    } catch (error) {
-      console.error('Error generating stats:', error)
-      setQrStats(null)
-    }
-  }
+  }, [text, format, getQRCodeOptions, generateQRStats])
 
   useEffect(() => {
     generateQRCode()
@@ -393,203 +391,241 @@ export default function QrCodeToolPage() {
   const currentTemplate = templates.find(t => t.type === selectedTemplate)
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">QR Code Generator</h1>
-        <p className="text-muted-foreground mt-2">
-          Generate professional QR codes with ready-made templates for common use cases. Perfect for businesses, events, and personal use.
-        </p>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-12">
-        <div className="col-span-12 lg:col-span-4">
-          {/* Template Selection Tabs */}
-          <div className="grid grid-cols-2 gap-2 mb-6">
-            {templates.map((template) => {
-              const IconComponent = template.icon
-              return (
-                <Button
-                  key={template.type}
-                  variant={selectedTemplate === template.type ? "default" : "outline"}
-                  className="justify-start h-auto p-3 text-left"
-                  onClick={() => handleTemplateChange(template.type)}
-                >
-                  <IconComponent className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <div className="truncate">
-                    <div className="font-medium text-sm truncate">{template.label}</div>
-                  </div>
-                </Button>
-              )
-            })}
-          </div>
-
-          {/* Template Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center">
-                {currentTemplate ? <currentTemplate.icon className="mr-3 h-6 w-6" /> : <MessageSquare className="mr-3 h-6 w-6" />}
-                {currentTemplate?.label || 'Text'}
-              </CardTitle>
-              <CardDescription>{currentTemplate?.description || 'Simple text message'}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {currentTemplate?.fields.map((field) => (
-                <div key={field.key} className="space-y-2">
-                  <Label htmlFor={`${selectedTemplate}-${field.key}`}>
-                    {field.label} {field.required && <span className="text-red-500">*</span>}
-                  </Label>
-                  <Input
-                    id={`${selectedTemplate}-${field.key}`}
-                    type={field.type}
-                    placeholder={field.placeholder}
-                    value={templateFormData[field.key] || ''}
-                    onChange={(e) => handleFormFieldChange(field.key, e.target.value)}
-                    autoFocus={field.key === 'text' && selectedTemplate === 'text'}
-                  />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold">QR Code Generator</h2>
+          <p className="text-muted-foreground">Generate custom QR codes with various templates and formats</p>
         </div>
 
-        {/* QR Code Display */}
-        <div className="col-span-12 lg:col-span-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Generated QR Code
-                <div className="flex items-center gap-1">
-                  {qrStats && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                            <Info className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="space-y-2 text-sm">
-                            <div><strong>Version:</strong> {qrStats.version}</div>
-                            <div><strong>Size:</strong> {qrStats.size}</div>
-                            <div><strong>Data Bits:</strong> {qrStats.dataBits}</div>
-                            <div><strong>Total Bits:</strong> {qrStats.totalBits}</div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                        <Settings className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>QR Code Settings</DialogTitle>
-                        <DialogDescription>
-                          Customize your QR code appearance and error correction level.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Size</Label>
-                            <Select value={size} onValueChange={(value: QRSize) => setSize(value)}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="small">{sizeOptions.small.label}</SelectItem>
-                                <SelectItem value="medium">{sizeOptions.medium.label}</SelectItem>
-                                <SelectItem value="large">{sizeOptions.large.label}</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+        <div className="grid gap-6 lg:grid-cols-12">
+          {/* Template Selection */}
+          <div className="lg:col-span-4 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Quick Templates</CardTitle>
+                <CardDescription>
+                  Choose a template type or start with text
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-2">
+                  {templates.map((template) => {
+                    const IconComponent = template.icon
+                    const isSelected = selectedTemplate === template.type
 
-                          <div className="space-y-2">
-                            <Label>Format</Label>
-                            <Select value={format} onValueChange={(value: QRFormat) => setFormat(value)}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="png">PNG</SelectItem>
-                                <SelectItem value="jpg">JPG</SelectItem>
-                                <SelectItem value="svg">SVG</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Error Correction Level</Label>
-                          <Select value={errorCorrectionLevel} onValueChange={(value: ErrorCorrectionLevel) => setErrorCorrectionLevel(value)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="L">Low (7%)</SelectItem>
-                              <SelectItem value="M">Medium (15%)</SelectItem>
-                              <SelectItem value="Q">Quartile (25%)</SelectItem>
-                              <SelectItem value="H">High (30%)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <p className="text-xs text-muted-foreground">
-                            Higher levels provide better error recovery but make the QR code denser.
-                          </p>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                    return (
+                      <TooltipProvider key={template.type}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleTemplateChange(template.type)}
+                              className={`p-3 rounded-lg border-2 transition-all duration-200 text-center hover:shadow-md ${
+                                isSelected
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-muted-foreground/20 hover:border-muted-foreground/40'
+                              }`}
+                            >
+                              <IconComponent className={`h-6 w-6 mx-auto mb-1 ${
+                                isSelected ? 'text-primary' : 'text-muted-foreground'
+                              }`} />
+                              <div className={`text-xs font-medium ${
+                                isSelected ? 'text-primary' : 'text-foreground'
+                              }`}>
+                                {template.label}
+                              </div>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{template.description}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )
+                  })}
                 </div>
-              </CardTitle>
-              <CardDescription>
-                {text ? "Your QR code is ready" : "Fill the form to generate a QR code"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-center p-8 border-2 border-dashed border-muted-foreground/25 rounded-lg min-h-[400px]">
-                {loading ? (
-                  <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 border-4 border-muted border-t-primary rounded-full animate-spin"></div>
-                    <p className="text-muted-foreground">Generating QR code...</p>
-                  </div>
-                ) : qrCodeDataURL ? (
-                  <div className="space-y-4">
-                    <img
-                      src={format === 'svg' ? qrCodeDataURL : qrCodeDataURL}
-                      alt={`QR Code for: ${text}`}
-                      className="max-w-full h-auto mx-auto"
-                      style={{ maxWidth: `${sizeOptions[size].width}px` }}
-                    />
-                    <div className="flex justify-center gap-2">
-                      <Button variant="outline" size="sm" onClick={downloadQRCode}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={shareQRCode}>
-                        <Share2 className="h-4 w-4 mr-2" />
-                        Share
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <CheckCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <p className="text-muted-foreground">QR code will appear here</p>
-                  </div>
-                )}
-              </div>
+              </CardContent>
+            </Card>
 
-              {error && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
+            {/* Template Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  {currentTemplate ? (
+                    <currentTemplate.icon className="h-5 w-5 text-primary" />
+                  ) : (
+                    <MessageSquare className="h-5 w-5 text-primary" />
+                  )}
+                  {currentTemplate?.label || 'Text'} Details
+                </CardTitle>
+                <CardDescription>
+                  {currentTemplate?.description || 'Simple text message'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {currentTemplate?.fields.map((field) => (
+                  <div key={field.key} className="space-y-2">
+                    <Label htmlFor={`${selectedTemplate}-${field.key}`} className="text-sm font-medium">
+                      {field.label}
+                      {field.required && <span className="text-red-500 ml-1">*</span>}
+                    </Label>
+                    <Input
+                      id={`${selectedTemplate}-${field.key}`}
+                      type={field.type}
+                      placeholder={field.placeholder}
+                      value={templateFormData[field.key] || ''}
+                      onChange={(e) => handleFormFieldChange(field.key, e.target.value)}
+                      autoFocus={field.key === 'text' && selectedTemplate === 'text'}
+                    />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* QR Code Display */}
+          <div className="lg:col-span-8">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Generated QR Code</CardTitle>
+                    <CardDescription>
+                      {text ? "Ready to download and share" : "Fill form to generate QR code"}
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {qrStats && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <Info className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <div className="text-sm space-y-1">
+                              <div><strong>Version:</strong> {qrStats.version}</div>
+                              <div><strong>Size:</strong> {qrStats.size}</div>
+                              <div><strong>Data Bits:</strong> {qrStats.dataBits}</div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Settings className="h-4 w-4 mr-2" />
+                          Settings
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>QR Settings</DialogTitle>
+                          <DialogDescription>
+                            Customize QR code size, format and error correction
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-6 py-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Size</Label>
+                              <Select value={size} onValueChange={(value: QRSize) => setSize(value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="small">{sizeOptions.small.label}</SelectItem>
+                                  <SelectItem value="medium">{sizeOptions.medium.label}</SelectItem>
+                                  <SelectItem value="large">{sizeOptions.large.label}</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Format</Label>
+                              <Select value={format} onValueChange={(value: QRFormat) => setFormat(value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="png">PNG</SelectItem>
+                                  <SelectItem value="jpg">JPG</SelectItem>
+                                  <SelectItem value="svg">SVG</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Error Correction Level</Label>
+                            <Select value={errorCorrectionLevel} onValueChange={(value: ErrorCorrectionLevel) => setErrorCorrectionLevel(value)}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="L">Low (7%)</SelectItem>
+                                <SelectItem value="M">Medium (15%)</SelectItem>
+                                <SelectItem value="Q">Quartile (25%)</SelectItem>
+                                <SelectItem value="H">High (30%)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                              Higher levels = better error recovery but denser codes
+                            </p>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-center p-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                  {loading ? (
+                    <div className="text-center space-y-4">
+                      <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin mx-auto"></div>
+                      <p className="text-muted-foreground">Generating QR code...</p>
+                    </div>
+                  ) : qrCodeDataURL ? (
+                    <div className="space-y-6">
+                      <div className="bg-white p-4 rounded-lg border shadow-sm inline-block">
+                        <img
+                          src={format === 'svg' ? qrCodeDataURL : qrCodeDataURL}
+                          alt={`QR Code for: ${text}`}
+                          style={{ maxWidth: `${sizeOptions[size].width}px` }}
+                        />
+                      </div>
+
+                      <div className="flex gap-2 justify-center">
+                        <Button onClick={downloadQRCode}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                        <Button variant="outline" onClick={shareQRCode}>
+                          <Share2 className="h-4 w-4 mr-2" />
+                          Share
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-2">
+                      <CheckCircle className="w-12 h-12 mx-auto text-muted-foreground/50" />
+                      <p className="text-muted-foreground">Fill the form above to generate your QR code</p>
+                    </div>
+                  )}
+                </div>
+
+                {error && (
+                  <Alert className="mt-6">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
