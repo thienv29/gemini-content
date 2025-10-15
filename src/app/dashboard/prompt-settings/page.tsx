@@ -174,10 +174,6 @@ export default function PromptSettingsPage() {
   }, [fetchPromptSettings])
 
   const handleDelete = (setting: PromptSetting) => {
-    // Temporarily select this single item
-    bulkDelete.handleSelectItem(setting.id, true)
-
-    // Call the same bulk delete handler
     bulkDelete.handleBulkDelete((selectedSettingsData: PromptSetting[], action: 'delete' | 'undo') => {
       if (action === 'delete') {
         // Optimistic delete: remove the item from UI
@@ -186,10 +182,7 @@ export default function PromptSettingsPage() {
         // Undo: add back the item
         setPromptSettings(prev => [...prev, ...selectedSettingsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
       }
-    })
-
-    // Clear the temporary selection
-    bulkDelete.handleSelectItem(setting.id, false)
+    }, fetchPromptSettings, [setting.id])
   }
 
   const handleSearchChange = (value: string) => {

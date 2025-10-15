@@ -191,10 +191,6 @@ export default function PromptsPage() {
   }, [prompts])
 
   const handleDelete = (prompt: Prompt) => {
-    // Temporarily select this single item
-    bulkDelete.handleSelectItem(prompt.id, true)
-
-    // Call the same bulk delete handler
     bulkDelete.handleBulkDelete((selectedPromptsData: Prompt[], action: 'delete' | 'undo') => {
       if (action === 'delete') {
         // Optimistic delete: remove the item from UI
@@ -203,10 +199,7 @@ export default function PromptsPage() {
         // Undo: add back the item
         setPrompts(prev => [...prev, ...selectedPromptsData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
       }
-    })
-
-    // Clear the temporary selection
-    bulkDelete.handleSelectItem(prompt.id, false)
+    }, fetchPrompts, [prompt.id])
   }
 
   const handleCreate = () => {
