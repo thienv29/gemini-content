@@ -398,9 +398,9 @@ export default function QrCodeToolPage() {
           <p className="text-muted-foreground">Generate custom QR codes with various templates and formats</p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-12">
+        <div className="grid gap-6 lg:grid-cols-2">
           {/* Template Selection */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">Quick Templates</CardTitle>
@@ -409,7 +409,7 @@ export default function QrCodeToolPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 grid-rows-2 gap-2">
                   {templates.map((template) => {
                     const IconComponent = template.icon
                     const isSelected = selectedTemplate === template.type
@@ -484,7 +484,7 @@ export default function QrCodeToolPage() {
           </div>
 
           {/* QR Code Display */}
-          <div className="lg:col-span-8">
+          <div>
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
