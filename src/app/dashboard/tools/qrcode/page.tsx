@@ -33,6 +33,7 @@ type QRSize = 'small' | 'medium' | 'large'
 type QRFormat = 'png' | 'jpg' | 'svg'
 type ErrorCorrectionLevel = 'L' | 'M' | 'Q' | 'H'
 type QRTemplate = 'text' | 'url' | 'email' | 'phone' | 'wifi' | 'vcard' | 'event' | 'location' | 'sms'
+type FrameType = 'none' | 'square' | 'rounded' | 'dashed' | 'heart' | 'floral' | 'tech' | 'industrial' | 'geometric'
 
 interface QRStats {
   version: number
@@ -74,6 +75,7 @@ export default function QrCodeToolPage() {
   const [size, setSize] = useState<QRSize>('medium')
   const [format, setFormat] = useState<QRFormat>('png')
   const [errorCorrectionLevel, setErrorCorrectionLevel] = useState<ErrorCorrectionLevel>('M')
+  const [frameType, setFrameType] = useState<FrameType>('none')
 
   // Define templates
   const templates: TemplateData[] = [
@@ -393,7 +395,7 @@ export default function QrCodeToolPage() {
   const shareQRCode = () => {
     if (!text) return
 
-    const url = `${window.location.origin}${window.location.pathname}?text=${encodeURIComponent(text)}&format=${format}&size=${size}&ecl=${errorCorrectionLevel}`
+    const url = `${window.location.origin}${window.location.pathname}?text=${encodeURIComponent(text)}&format=${format}&size=${size}&ecl=${errorCorrectionLevel}&frame=${frameType}`
 
     if (navigator.share) {
       navigator.share({
@@ -405,6 +407,129 @@ export default function QrCodeToolPage() {
       })
     } else {
       copyToClipboard()
+    }
+  }
+
+  // Frame type options with labels and descriptions
+  const frameTypeOptions = {
+    none: { label: 'No Frame', description: 'Plain QR code without frame' },
+    square: { label: 'Square Frame', description: 'Classic square border around QR code' },
+    rounded: { label: 'Rounded Frame', description: 'Rounded corners for a modern look' },
+    dashed: { label: 'Dashed Frame', description: 'Dashed border for artistic design' },
+    heart: { label: 'Heart Frame', description: 'Heart-shaped frame for special occasions' },
+    floral: { label: 'Floral Frame', description: 'Decorative floral pattern around QR code' },
+    tech: { label: 'Tech Frame', description: 'Modern tech-inspired geometric borders' },
+    industrial: { label: 'Industrial Frame', description: 'Bold, heavy borders for industrial look' },
+    geometric: { label: 'Geometric Frame', description: 'Complex geometric patterns and shapes' }
+  }
+
+  // Function to get frame styles
+  const getFrameStyles = (frameType: FrameType, imageSize: number) => {
+    const basePadding = 24
+    const baseBorderWidth = 4
+
+    switch (frameType) {
+      case 'square':
+        return {
+          padding: `${basePadding}px`,
+          border: `${baseBorderWidth}px solid #2563eb`,
+          borderRadius: '12px',
+          backgroundColor: '#ffffff',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.1), 0 4px 15px rgba(37,99,235,0.1)',
+          position: 'relative' as const
+        }
+      case 'rounded':
+        return {
+          padding: `${basePadding}px`,
+          border: `3px solid linear-gradient(135deg, #667eea 0%, #764ba2 100%)`,
+          borderRadius: '20px',
+          backgroundColor: '#ffffff',
+          boxShadow: '0 15px 35px rgba(0,0,0,0.1), inset 0 2px 4px rgba(255,255,255,0.5)',
+          background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+          position: 'relative' as const
+        }
+      case 'dashed':
+        return {
+          padding: `${basePadding}px`,
+          border: '4px dashed #10b981',
+          borderRadius: '16px',
+          backgroundColor: '#f0fdf4',
+          boxShadow: '0 8px 20px rgba(16,185,129,0.15)',
+          position: 'relative' as const
+        }
+      case 'heart':
+        return {
+          padding: `${basePadding + 15}px`,
+          backgroundColor: '#fef2f2',
+          position: 'relative' as const,
+          borderRadius: '24px',
+          boxShadow: '0 12px 30px rgba(220,38,38,0.2)',
+          border: '2px solid #fca5a5',
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z' fill='%23dc2626'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+          backgroundSize: '60px 60px'
+        }
+      case 'floral':
+        return {
+          padding: `${basePadding}px`,
+          borderRadius: '18px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          border: '3px solid #ffffff',
+          boxShadow: '0 15px 35px rgba(102,126,234,0.3)',
+          backgroundImage: `
+            radial-gradient(circle at 20% 80%, #ffffff 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, #ffffff 0%, transparent 50%),
+            radial-gradient(circle at 40% 40%, #ffffff 0%, transparent 50%)
+          `,
+          position: 'relative' as const
+        }
+      case 'tech':
+        return {
+          padding: `${basePadding}px`,
+          borderRadius: '14px',
+          backgroundColor: '#0f172a',
+          border: '2px solid #06b6d4',
+          boxShadow: '0 10px 25px rgba(6,182,212,0.2), inset 0 1px 2px rgba(255,255,255,0.1)',
+          backgroundImage: `
+            linear-gradient(45deg, rgba(6,182,212,0.1) 25%, transparent 25%),
+            linear-gradient(-45deg, rgba(6,182,212,0.1) 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, rgba(6,182,212,0.1) 75%),
+            linear-gradient(-45deg, transparent 75%, rgba(6,182,212,0.1) 75%)
+          `,
+          backgroundSize: '12px 12px',
+          position: 'relative' as const
+        }
+      case 'industrial':
+        return {
+          padding: `${basePadding}px`,
+          borderRadius: '8px',
+          backgroundColor: '#374151',
+          border: '4px solid #9ca3af',
+          boxShadow: '0 15px 35px rgba(0,0,0,0.4), inset 0 2px 4px rgba(156,163,175,0.3)',
+          backgroundImage: `
+            repeating-linear-gradient(0deg, transparent, transparent 4px, rgba(156,163,175,0.3) 4px, rgba(156,163,175,0.3) 8px),
+            repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(156,163,175,0.3) 4px, rgba(156,163,175,0.3) 8px)
+          `,
+          position: 'relative' as const
+        }
+      case 'geometric':
+        return {
+          padding: `${basePadding}px`,
+          backgroundColor: '#1e293b',
+          borderRadius: '16px',
+          border: '3px solid #7c3aed',
+          boxShadow: '0 12px 30px rgba(124,58,237,0.3)',
+          clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)',
+          position: 'relative' as const
+        }
+      default:
+        return {
+          padding: '0px',
+          border: 'none',
+          borderRadius: '0px',
+          backgroundColor: 'transparent'
+        }
     }
   }
 
@@ -428,6 +553,9 @@ export default function QrCodeToolPage() {
           <p className="text-muted-foreground">Generate custom QR codes with various templates and formats</p>
         </div>
 
+        {/* Frame Selection Button */}
+
+
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Template Selection */}
           <div className="space-y-6">
@@ -450,18 +578,15 @@ export default function QrCodeToolPage() {
                           <TooltipTrigger asChild>
                             <button
                               onClick={() => handleTemplateChange(template.type)}
-                              className={`p-3 rounded-lg border-2 transition-all duration-200 text-center hover:shadow-md ${
-                                isSelected
+                              className={`p-3 rounded-lg border-2 transition-all duration-200 text-center hover:shadow-md ${isSelected
                                   ? 'border-primary bg-primary/5'
                                   : 'border-muted-foreground/20 hover:border-muted-foreground/40'
-                              }`}
+                                }`}
                             >
-                              <IconComponent className={`h-6 w-6 mx-auto mb-1 ${
-                                isSelected ? 'text-primary' : 'text-muted-foreground'
-                              }`} />
-                              <div className={`text-xs font-medium ${
-                                isSelected ? 'text-primary' : 'text-foreground'
-                              }`}>
+                              <IconComponent className={`h-6 w-6 mx-auto mb-1 ${isSelected ? 'text-primary' : 'text-muted-foreground'
+                                }`} />
+                              <div className={`text-xs font-medium ${isSelected ? 'text-primary' : 'text-foreground'
+                                }`}>
                                 {template.label}
                               </div>
                             </button>
@@ -557,6 +682,99 @@ export default function QrCodeToolPage() {
                         </Tooltip>
                       </TooltipProvider>
                     )}
+                    <div className="flex justify-center">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="lg" className="flex items-center gap-2">
+                            <Settings className="h-5 w-5" />
+                            Choose Frame Template
+                            {frameType !== 'none' && (
+                              <span className="px-2 py-1 text-xs bg-primary text-white rounded-full">
+                                {frameTypeOptions[frameType]?.label}
+                              </span>
+                            )}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-4xl">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl font-semibold">Choose Frame Template</DialogTitle>
+                            <DialogDescription>
+                              Select a decorative frame for your QR code. Click on any frame to preview and select it.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="py-6">
+                            <div className="grid grid-cols-3 md:grid-cols-5 gap-6">
+                              {Object.entries(frameTypeOptions).map(([key, option]) => {
+                                const isSelected = frameType === key
+                                const previewStyles = getFrameStyles(key as FrameType, 80)
+                                const smallQRCode = `
+                      <svg width="80" height="80" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="0" y="0" width="21" height="21" fill="white"/>
+                        <rect x="0" y="0" width="7" height="7" fill="black"/>
+                        <rect x="14" y="0" width="7" height="7" fill="black"/>
+                        <rect x="0" y="14" width="7" height="7" fill="black"/>
+                        <rect x="2" y="2" width="3" height="3" fill="white"/>
+                        <rect x="16" y="2" width="3" height="3" fill="white"/>
+                        <rect x="2" y="16" width="3" height="3" fill="white"/>
+                        <rect x="8" y="8" width="5" height="5" fill="black"/>
+                      </svg>
+                    `
+
+                                return (
+                                  <div key={key} className="space-y-3">
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => {
+                                              setFrameType(key as FrameType)
+                                            }}
+                                            className={`w-full p-4 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${isSelected
+                                                ? 'border-primary bg-primary/5 shadow-lg ring-2 ring-primary/20'
+                                                : 'border-muted-foreground/20 hover:border-muted-foreground/40'
+                                              }`}
+                                          >
+                                            <div
+                                              className="flex items-center justify-center mb-2"
+                                              style={{
+                                                ...previewStyles,
+                                                width: '80px',
+                                                height: '80px',
+                                                transform: 'scale(0.6)',
+                                                transformOrigin: 'center',
+                                                padding: '12px',
+                                                margin: '0 auto'
+                                              }}
+                                            >
+                                              <div dangerouslySetInnerHTML={{ __html: smallQRCode }} />
+                                            </div>
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top" className="max-w-xs">
+                                          <div className="text-sm">
+                                            <div className="font-semibold">{option.label}</div>
+                                            <div className="text-muted-foreground">{option.description}</div>
+                                          </div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    <div className="text-center">
+                                      <div className={`text-sm font-medium ${isSelected ? 'text-primary' : 'text-foreground'
+                                        }`}>
+                                        {option.label}
+                                      </div>
+                                      {isSelected && (
+                                        <div className="text-xs text-primary mt-1">✓ Selected</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button variant="outline" size="sm">
@@ -568,7 +786,7 @@ export default function QrCodeToolPage() {
                         <DialogHeader>
                           <DialogTitle>QR Settings</DialogTitle>
                           <DialogDescription>
-                            Customize QR code size, format and error correction
+                            Customize QR code size, format, error correction and frame style
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-6 py-4">
@@ -619,6 +837,28 @@ export default function QrCodeToolPage() {
                               Higher levels = better error recovery but denser codes
                             </p>
                           </div>
+
+                          <div className="space-y-2">
+                            <Label>Frame Style</Label>
+                            <Select value={frameType} onValueChange={(value: FrameType) => setFrameType(value)}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(frameTypeOptions).map(([key, option]) => (
+                                  <SelectItem key={key} value={key}>
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{option.label}</span>
+                                      <span className="text-xs text-muted-foreground">{option.description}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                              Add decorative frames around your QR code
+                            </p>
+                          </div>
                         </div>
                       </DialogContent>
                     </Dialog>
@@ -634,11 +874,11 @@ export default function QrCodeToolPage() {
                     </div>
                   ) : qrCodeDataURL ? (
                     <div className="space-y-6">
-                      <div className="bg-white p-4 rounded-lg border shadow-sm inline-block">
+                      <div style={getFrameStyles(frameType, sizeOptions[size].width)} className="inline-block">
                         <img
                           src={format === 'svg' ? qrCodeDataURL : qrCodeDataURL}
                           alt={`QR Code for: ${text}`}
-                          style={{ maxWidth: `${sizeOptions[size].width}px` }}
+                          style={{ maxWidth: `${sizeOptions[size].width}px`, width: '100%', height: 'auto' }}
                         />
                       </div>
 
