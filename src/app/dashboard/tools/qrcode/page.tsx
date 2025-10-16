@@ -267,15 +267,66 @@ export default function QrCodeToolPage() {
     large: { width: 400, label: 'Large (400x400)' }
   }
 
-  const getQRCodeOptions = useCallback((forStats = false) => ({
-    width: sizeOptions[size].width,
-    margin: 2,
-    color: {
-      dark: '#000000FF',
-      light: '#FFFFFFFF'
-    },
-    errorCorrectionLevel: errorCorrectionLevel as 'L' | 'M' | 'Q' | 'H'
-  }), [size, errorCorrectionLevel])
+  const getQRCodeColors = useCallback((frameType: FrameType) => {
+    switch (frameType) {
+      case 'tech':
+        return {
+          dark: '#06b6d4', // Cyan
+          light: '#0f172a'  // Dark slate
+        }
+      case 'industrial':
+        return {
+          dark: '#fbbf24', // Amber
+          light: '#374151'  // Gray-700
+        }
+      case 'geometric':
+        return {
+          dark: '#7c3aed', // Purple
+          light: '#1e293b'  // Slate-800
+        }
+      case 'floral':
+        return {
+          dark: '#6366f1', // Indigo
+          light: '#e0e7ff'  // Indigo-50
+        }
+      case 'heart':
+        return {
+          dark: '#dc2626', // Red
+          light: '#fef2f2'  // Red-50
+        }
+      case 'rounded':
+        return {
+          dark: '#667eea', // Blue
+          light: '#f5f7fa'  // Light gradient
+        }
+      case 'square':
+        return {
+          dark: '#2563eb', // Blue
+          light: '#ffffff'
+        }
+      case 'dashed':
+        return {
+          dark: '#10b981', // Emerald
+          light: '#f0fdf4'  // Emerald-50
+        }
+      default:
+        return {
+          dark: '#000000FF',
+          light: '#FFFFFFFF'
+        }
+    }
+  }, [])
+
+  const getQRCodeOptions = useCallback((forStats = false) => {
+    const colors = getQRCodeColors(frameType)
+
+    return {
+      width: sizeOptions[size].width,
+      margin: 2,
+      color: colors,
+      errorCorrectionLevel: errorCorrectionLevel as 'L' | 'M' | 'Q' | 'H'
+    }
+  }, [size, errorCorrectionLevel, frameType, getQRCodeColors])
 
   const generateQRStats = useCallback(async () => {
     try {
