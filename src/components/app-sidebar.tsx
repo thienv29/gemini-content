@@ -28,133 +28,34 @@ import {
 import { useAuthStore } from "@/stores/auth-store"
 import axios from "axios"
 import { Upload } from "lucide-react"
+import { navigationConfig } from "@/lib/navigation-config"
+
+// Icon mapping for navigation items
+const iconMap = {
+  "Prompts": FileText,
+  "Media": Upload,
+  "Tools": QrCode,
+  "Playground": SquareTerminal,
+  "Models": Bot,
+  "Documentation": BookOpen,
+  "Settings": Settings2,
+}
+
+// Transform navigationConfig to the format expected by NavMain
+function transformNavigationConfig(config: typeof navigationConfig) {
+  return config.map(item => ({
+    title: item.title,
+    url: item.url,
+    icon: iconMap[item.title as keyof typeof iconMap],
+    items: item.children?.map(child => ({
+      title: child.title,
+      url: child.url,
+    }))
+  }))
+}
 
 const data = {
-  navMain: [
-    {
-      title: "Prompts",
-      url: "#",
-      icon: FileText,
-      items: [
-        {
-          title: "All Prompts",
-          url: "/dashboard/prompts",
-        },
-        {
-          title: "Groups",
-          url: "/dashboard/prompt-groups",
-        },
-        {
-          title: "Settings",
-          url: "/dashboard/prompt-settings",
-        },
-        {
-          title: "Content Production",
-          url: "/dashboard/content-production",
-        },
-      ],
-    },
-    {
-      title: "Media",
-      url: "/dashboard/uploads",
-      icon: Upload,
-    },
-    {
-      title: "Tools",
-      url: "#",
-      icon: QrCode,
-      items: [
-        {
-          title: "QR Code",
-          url: "/dashboard/tools/qrcode",
-        },
-      ],
-    },
-    {
-      title: "Playground",
-      url: "#",
-      icon: SquareTerminal,
-      items: [
-        {
-          title: "History",
-          url: "#",
-        },
-        {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Models",
-      url: "#",
-      icon: Bot,
-      items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Workspace",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
-    },
-  ],
+  navMain: transformNavigationConfig(navigationConfig),
   projects: [
     {
       name: "Design Engineering",

@@ -10,19 +10,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-
-type NavigationMapping = {
-  [key: string]: { title: string; isHome?: boolean }
-}
-
-const navigationMapping: NavigationMapping = {
-  "/dashboard": { title: "Dashboard", isHome: true },
-  "/dashboard/prompts": { title: "All Prompts" },
-  "/dashboard/prompt-groups": { title: "Groups" },
-  "/dashboard/prompt-settings": { title: "Settings" },
-  "/dashboard/uploads": { title: "Media" },
-  "/dashboard/content-production": { title: "Content Production" },
-}
+import { urlTitleMap } from "@/lib/navigation-config"
 
 export function DynamicBreadcrumb() {
   const pathname = usePathname()
@@ -43,10 +31,10 @@ export function DynamicBreadcrumb() {
     let currentPath = "/dashboard"
     for (let i = 1; i < pathSegments.length; i++) {
       currentPath += `/${pathSegments[i]}`
-      const mapping = navigationMapping[currentPath]
-      if (mapping && !mapping.isHome) {
+      const title = urlTitleMap[currentPath]
+      if (title) {
         breadcrumbs.push({
-          title: mapping.title,
+          title,
           href: currentPath,
           current: currentPath === pathname
         })
