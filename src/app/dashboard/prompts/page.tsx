@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import axios from "axios"
 import { Plus, Edit, Trash, Copy } from "lucide-react"
 import { SearchInput } from "@/components/ui/search-input"
@@ -69,19 +70,17 @@ export default function PromptsPage() {
     {
       id: "select",
       header: () => (
-        <input
-          type="checkbox"
+        <Checkbox
           checked={bulkDelete.isAllSelected}
-          onChange={(e) => bulkDelete.handleSelectAll(e.target.checked)}
+          onCheckedChange={(checked) => bulkDelete.handleSelectAll(!!checked)}
         />
       ),
       cell: ({ row }) => {
         const prompt = row.original
         return (
-          <input
-            type="checkbox"
+          <Checkbox
             checked={bulkDelete.selectedItems.has(prompt.id)}
-            onChange={(e) => bulkDelete.handleSelectItem(prompt.id, e.target.checked)}
+            onCheckedChange={(checked) => bulkDelete.handleSelectItem(prompt.id, !!checked)}
           />
         )
       },
