@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Input } from "@/components/ui/input"
+import { DateTimePicker } from "@/components/ui/date-picker"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -49,7 +50,7 @@ interface TemplateData {
     key: string
     label: string
     placeholder: string
-    type: 'text' | 'email' | 'tel' | 'url' | 'password'
+    type: 'text' | 'email' | 'tel' | 'url' | 'password' | 'datetime-local' | 'date-picker'
     required: boolean
   }>
 }
@@ -145,8 +146,8 @@ export default function QrCodeToolPage() {
       icon: Calendar,
       fields: [
         { key: 'title', label: 'Event Title', placeholder: 'Meeting Title', type: 'text', required: true },
-        { key: 'start', label: 'Start Date & Time', placeholder: '2024-01-15T14:00:00', type: 'text', required: true },
-        { key: 'end', label: 'End Date & Time', placeholder: '2024-01-15T15:00:00', type: 'text', required: true },
+        { key: 'start', label: 'Start Date & Time', placeholder: '2024-01-15T14:00:00', type: 'date-picker', required: true },
+        { key: 'end', label: 'End Date & Time', placeholder: '2024-01-15T15:00:00', type: 'date-picker', required: true },
         { key: 'location', label: 'Location', placeholder: 'Conference Room A', type: 'text', required: false },
         { key: 'description', label: 'Description', placeholder: 'Event description...', type: 'text', required: false }
       ]
@@ -207,7 +208,36 @@ export default function QrCodeToolPage() {
           location: data.location || '',
           description: data.description || ''
         }
-        return `BEGIN:VEVENT\nSUMMARY:${eventData.title}\nDTSTART:${eventData.start}\nDTEND:${eventData.end}\n${eventData.location ? `LOCATION:${eventData.location}\n` : ''}${eventData.description ? `DESCRIPTION:${eventData.description}\n` : ''}END:VEVENT`
+
+        // Only generate QR code if we have required fields
+        if (!eventData.title || !eventData.start || !eventData.end) {
+          return ''
+        }
+
+        // Format dates for iCal (YYYYMMDDTHHMMSS format without Z for better compatibility)
+        const formatDateForICal = (dateStr: string) => {
+          const date = new Date(dateStr)
+          const year = date.getFullYear()
+          const month = String(date.getMonth() + 1).padStart(2, '0')
+          const day = String(date.getDate()).padStart(2, '0')
+          const hours = String(date.getHours()).padStart(2, '0')
+          const minutes = String(date.getMinutes()).padStart(2, '0')
+          const seconds = String(date.getSeconds()).padStart(2, '0')
+          return `${year}${month}${day}T${hours}${minutes}${seconds}`
+        }
+
+        const startDate = formatDateForICal(eventData.start)
+        const endDate = formatDateForICal(eventData.end)
+
+        let vcal = 'BEGIN:VEVENT\n'
+        vcal += `SUMMARY:${eventData.title}\n`
+        vcal += `DTSTART:${startDate}\n`
+        vcal += `DTEND:${endDate}\n`
+        if (eventData.location) vcal += `LOCATION:${eventData.location}\n`
+        if (eventData.description) vcal += `DESCRIPTION:${eventData.description}\n`
+        vcal += 'END:VEVENT'
+
+        return vcal
       case 'location':
         const geoUrl = `geo:${data.latitude},${data.longitude}`
         if (data.name) {
@@ -469,14 +499,28 @@ export default function QrCodeToolPage() {
                       {field.label}
                       {field.required && <span className="text-red-500 ml-1">*</span>}
                     </Label>
-                    <Input
-                      id={`${selectedTemplate}-${field.key}`}
-                      type={field.type}
-                      placeholder={field.placeholder}
-                      value={templateFormData[field.key] || ''}
-                      onChange={(e) => handleFormFieldChange(field.key, e.target.value)}
-                      autoFocus={field.key === 'text' && selectedTemplate === 'text'}
-                    />
+                    {field.type === 'date-picker' ? (
+                      <DateTimePicker
+                        dateTime={
+                          templateFormData[field.key]
+                            ? new Date(templateFormData[field.key])
+                            : undefined
+                        }
+                        onDateTimeChange={(date) => {
+                          handleFormFieldChange(field.key, date ? date.toISOString() : '')
+                        }}
+                        placeholder={field.placeholder}
+                      />
+                    ) : (
+                      <Input
+                        id={`${selectedTemplate}-${field.key}`}
+                        type={field.type}
+                        placeholder={field.placeholder}
+                        value={templateFormData[field.key] || ''}
+                        onChange={(e) => handleFormFieldChange(field.key, e.target.value)}
+                        autoFocus={field.key === 'text' && selectedTemplate === 'text'}
+                      />
+                    )}
                   </div>
                 ))}
               </CardContent>
