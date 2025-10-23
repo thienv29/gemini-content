@@ -1130,97 +1130,132 @@ export default function UploadsPage() {
                               }
 
                               return (
-                                <div
-                                  key={item.id}
-                                  className={`group relative flex flex-col items-center p-3 rounded-lg hover:bg-white/60 transition-all duration-200 cursor-pointer select-none ${
-                                    selectedFiles.has(item.id) ? 'bg-blue-100 ring-2 ring-blue-400 shadow-md' : 'hover:shadow-sm'
-                                  } ${
-                                    item.type === 'folder' && droppedFolderPath === item.path ? 'ring-2 ring-blue-400 bg-blue-50' : ''
-                                  }`}
-                                  onDragOver={item.type === 'folder' ? (e) => handleFolderDragOver(e, item.path) : undefined}
-                                  onDragLeave={item.type === 'folder' ? handleFolderDragLeave : undefined}
-                                  onDrop={item.type === 'folder' ? (e) => handleDrop(e, item.path) : undefined}
-                                  onClick={(e) => handleClick(item, e)}
-                                  onDoubleClick={() => handleDoubleClick(item)}
-                                  onContextMenu={(e) => {
-                                    e.preventDefault()
-                                    // Could add right-click menu here
-                                  }}
-                                >
-                                  {/* Selection indicator */}
-                                  <div className={`absolute top-1 left-1 w-4 h-4 rounded-full border-2 transition-all ${
-                                    selectedFiles.has(item.id)
-                                      ? 'bg-blue-500 border-blue-500 shadow-sm'
-                                      : 'border-gray-300 opacity-0 group-hover:opacity-100'
-                                  }`}>
-                                    {selectedFiles.has(item.id) && (
-                                      <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-                                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                                      </div>
-                                    )}
-                                  </div>
+                                <DropdownMenu key={item.id}>
+                                  <DropdownMenuTrigger asChild>
+                                    <div
+                                      className={`group relative flex flex-col items-center p-3 rounded-lg hover:bg-white/60 transition-all duration-200 cursor-pointer select-none ${
+                                        selectedFiles.has(item.id) ? 'bg-blue-100 ring-2 ring-blue-400 shadow-md' : 'hover:shadow-sm'
+                                      } ${
+                                        item.type === 'folder' && droppedFolderPath === item.path ? 'ring-2 ring-blue-400 bg-blue-50' : ''
+                                      }`}
+                                      onDragOver={item.type === 'folder' ? (e) => handleFolderDragOver(e, item.path) : undefined}
+                                      onDragLeave={item.type === 'folder' ? handleFolderDragLeave : undefined}
+                                      onDrop={item.type === 'folder' ? (e) => handleDrop(e, item.path) : undefined}
+                                      onClick={(e) => handleClick(item, e)}
+                                      onDoubleClick={() => handleDoubleClick(item)}
+                                      onContextMenu={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        // Prevent default context menu
+                                      }}
+                                    >
+                                      {/* Menu button in top-right corner */}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-background/80 z-10"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <MoreVertical className="w-3 h-3" />
+                                      </Button>
 
-                                  {/* File/Folder Icon or Image Preview */}
-                                  <div className="w-24 h-24 mb-2 flex items-center justify-center">
-                                    {item.type === 'file' && isImageFile(item.name) ? (
-                                      <div className="w-full h-full bg-white rounded-lg overflow-hidden shadow-sm border">
-                                        {imagePreviews[item.path]?.loading ? (
-                                          <div className="w-full h-full flex items-center justify-center">
-                                            <Spinner className="w-8 h-8" />
-                                          </div>
-                                        ) : imagePreviews[item.path]?.error ? (
-                                          <div className="w-full h-full flex items-center justify-center bg-gray-50">
-                                            <FileImage className="w-10 h-10 text-gray-400" />
-                                          </div>
-                                        ) : imagePreviews[item.path]?.url ? (
-                                          <img
-                                            src={imagePreviews[item.path].url}
-                                            alt={item.name}
-                                            className="w-full h-full object-cover"
-                                          />
-                                        ) : (
-                                          <div className="w-full h-full flex items-center justify-center bg-gray-50">
-                                            <FileImage className="w-10 h-10 text-green-500" />
+                                      {/* Selection indicator */}
+                                      <div className={`absolute top-1 left-1 w-4 h-4 rounded-full border-2 transition-all ${
+                                        selectedFiles.has(item.id)
+                                          ? 'bg-blue-500 border-blue-500 shadow-sm'
+                                          : 'border-gray-300 opacity-0 group-hover:opacity-100'
+                                      }`}>
+                                        {selectedFiles.has(item.id) && (
+                                          <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                                           </div>
                                         )}
                                       </div>
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center">
-                                        <div className="w-20 h-20 flex items-center justify-center">
-                                          {item.type === 'folder' ? (
-                                            <div className="w-16 h-16 rounded-lg bg-blue-100 flex items-center justify-center border-2 border-blue-200">
-                                              <Folder className="w-10 h-10 text-blue-600" />
+
+                                      {/* File/Folder Icon or Image Preview */}
+                                      <div className="w-24 h-24 mb-2 flex items-center justify-center">
+                                        {item.type === 'file' && isImageFile(item.name) ? (
+                                          <div className="w-full h-full bg-white rounded-lg overflow-hidden shadow-sm border">
+                                            {imagePreviews[item.path]?.loading ? (
+                                              <div className="w-full h-full flex items-center justify-center">
+                                                <Spinner className="w-8 h-8" />
+                                              </div>
+                                            ) : imagePreviews[item.path]?.error ? (
+                                              <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                                <FileImage className="w-10 h-10 text-gray-400" />
+                                              </div>
+                                            ) : imagePreviews[item.path]?.url ? (
+                                              <img
+                                                src={imagePreviews[item.path].url}
+                                                alt={item.name}
+                                                className="w-full h-full object-cover"
+                                              />
+                                            ) : (
+                                              <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                                <FileImage className="w-10 h-10 text-green-500" />
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <div className="w-full h-full flex items-center justify-center">
+                                            <div className="w-20 h-20 flex items-center justify-center">
+                                              {item.type === 'folder' ? (
+                                                <div className="w-16 h-16 rounded-lg bg-blue-100 flex items-center justify-center border-2 border-blue-200">
+                                                  <Folder className="w-10 h-10 text-blue-600" />
+                                                </div>
+                                              ) : (
+                                                getLargeFileIcon(item.name, item.type)
+                                              )}
                                             </div>
-                                          ) : (
-                                            getLargeFileIcon(item.name, item.type)
-                                          )}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* File Name */}
+                                      <div className="w-full px-1">
+                                        <p className="text-xs text-center text-gray-700 font-medium leading-tight break-words line-clamp-2"
+                                           title={item.name}>
+                                          {item.name}
+                                        </p>
+                                        {item.size !== undefined && (
+                                          <p className="text-xs text-gray-500 text-center mt-0.5">
+                                            {formatFileSize(item.size)}
+                                          </p>
+                                        )}
+                                      </div>
+
+                                      {/* Drop message for folders */}
+                                      {item.type === 'folder' && droppedFolderPath === item.path && (
+                                        <div className="absolute inset-0 bg-blue-500/10 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                                          <div className="text-xs text-blue-600 font-medium bg-white px-2 py-1 rounded shadow-sm">
+                                            Drop files here
+                                          </div>
                                         </div>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* File Name */}
-                                  <div className="w-full px-1">
-                                    <p className="text-xs text-center text-gray-700 font-medium leading-tight break-words line-clamp-2"
-                                       title={item.name}>
-                                      {item.name}
-                                    </p>
-                                    {item.size !== undefined && (
-                                      <p className="text-xs text-gray-500 text-center mt-0.5">
-                                        {formatFileSize(item.size)}
-                                      </p>
-                                    )}
-                                  </div>
-
-                                  {/* Drop message for folders */}
-                                  {item.type === 'folder' && droppedFolderPath === item.path && (
-                                    <div className="absolute inset-0 bg-blue-500/10 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                                      <div className="text-xs text-blue-600 font-medium bg-white px-2 py-1 rounded shadow-sm">
-                                        Drop files here
-                                      </div>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent>
+                                    {item.type === 'file' && (
+                                      <>
+                                        <DropdownMenuItem onClick={() => handleDownload(item)}>
+                                          <Download className="w-4 h-4 mr-2" />
+                                          Download
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleCopyPublicLink(item)}>
+                                          <Clipboard className="w-4 h-4 mr-2" />
+                                          Copy Public Link
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+                                    <DropdownMenuItem
+                                      onClick={() => handleDelete(item)}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               )
                             })}
                           </div>
