@@ -105,6 +105,8 @@ export default function UploadsPage() {
   const [sortField, setSortField] = useState<SortField>('name')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [imagePreviews, setImagePreviews] = useState<ImagePreviewState>({})
+  const [contextMenuItem, setContextMenuItem] = useState<FileItem | null>(null)
+  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
@@ -120,6 +122,18 @@ export default function UploadsPage() {
   }, [currentPath])
 
   // Handle browser back/forward navigation and initial URL hash
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (contextMenuItem && contextMenuPosition) {
+        setContextMenuItem(null)
+        setContextMenuPosition(null)
+      }
+    }
+
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [contextMenuItem, contextMenuPosition])
+
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
       const newPath = event.state?.path || '/'
@@ -1130,26 +1144,9 @@ export default function UploadsPage() {
                               }
 
                               return (
-                                <DropdownMenu key={item.id}>
-                                  <DropdownMenuTrigger asChild>
-                                    <div
-                                      className={`group relative flex flex-col items-center p-3 rounded-lg hover:bg-white/60 transition-all duration-200 cursor-pointer select-none ${
-                                        selectedFiles.has(item.id) ? 'bg-blue-100 ring-2 ring-blue-400 shadow-md' : 'hover:shadow-sm'
-                                      } ${
-                                        item.type === 'folder' && droppedFolderPath === item.path ? 'ring-2 ring-blue-400 bg-blue-50' : ''
-                                      }`}
-                                      onDragOver={item.type === 'folder' ? (e) => handleFolderDragOver(e, item.path) : undefined}
-                                      onDragLeave={item.type === 'folder' ? handleFolderDragLeave : undefined}
-                                      onDrop={item.type === 'folder' ? (e) => handleDrop(e, item.path) : undefined}
-                                      onClick={(e) => handleClick(item, e)}
-                                      onDoubleClick={() => handleDoubleClick(item)}
-                                      onContextMenu={(e) => {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                        // Prevent default context menu
-                                      }}
-                                    >
-                                      {/* Menu button in top-right corner */}
+                                <div key={item.id}>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -1158,107 +1155,190 @@ export default function UploadsPage() {
                                       >
                                         <MoreVertical className="w-3 h-3" />
                                       </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                      {item.type === 'file' && (
+                                        <>
+                                          <DropdownMenuItem onClick={() => handleDownload(item)}>
+                                            <Download className="w-4 h-4 mr-2" />
+                                            Download
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => handleCopyPublicLink(item)}>
+                                            <Clipboard className="w-4 h-4 mr-2" />
+                                            Copy Public Link
+                                          </DropdownMenuItem>
+                                        </>
+                                      )}
+                                      <DropdownMenuItem
+                                        onClick={() => handleDelete(item)}
+                                        className="text-destructive"
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
 
-                                      {/* Selection indicator */}
-                                      <div className={`absolute top-1 left-1 w-4 h-4 rounded-full border-2 transition-all ${
-                                        selectedFiles.has(item.id)
-                                          ? 'bg-blue-500 border-blue-500 shadow-sm'
-                                          : 'border-gray-300 opacity-0 group-hover:opacity-100'
-                                      }`}>
-                                        {selectedFiles.has(item.id) && (
-                                          <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-                                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                                          </div>
-                                        )}
-                                      </div>
+                                  <div
+                                    className={`group relative flex flex-col items-center p-3 rounded-lg hover:bg-white/60 transition-all duration-200 cursor-pointer select-none ${
+                                      selectedFiles.has(item.id) ? 'bg-blue-100 ring-2 ring-blue-400 shadow-md' : 'hover:shadow-sm'
+                                    } ${
+                                      item.type === 'folder' && droppedFolderPath === item.path ? 'ring-2 ring-blue-400 bg-blue-50' : ''
+                                    }`}
+                                    onDragOver={item.type === 'folder' ? (e) => handleFolderDragOver(e, item.path) : undefined}
+                                    onDragLeave={item.type === 'folder' ? handleFolderDragLeave : undefined}
+                                    onDrop={item.type === 'folder' ? (e) => handleDrop(e, item.path) : undefined}
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                      handleClick(item, e)
+                                    }}
+                                    onDoubleClick={(e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                      handleDoubleClick(item)
+                                    }}
+                                    onContextMenu={(e) => {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                      // Select item and open context menu
+                                      toggleFileSelection(item.id)
+                                      setContextMenuItem(item)
+                                      setContextMenuPosition({ x: e.clientX, y: e.clientY })
+                                    }}
+                                  >
+                                    {/* Selection indicator */}
+                                    <div className={`absolute top-1 left-1 w-4 h-4 rounded-full border-2 transition-all ${
+                                      selectedFiles.has(item.id)
+                                        ? 'bg-blue-500 border-blue-500 shadow-sm'
+                                        : 'border-gray-300 opacity-0 group-hover:opacity-100'
+                                    }`}>
+                                      {selectedFiles.has(item.id) && (
+                                        <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                                        </div>
+                                      )}
+                                    </div>
 
-                                      {/* File/Folder Icon or Image Preview */}
-                                      <div className="w-24 h-24 mb-2 flex items-center justify-center">
-                                        {item.type === 'file' && isImageFile(item.name) ? (
-                                          <div className="w-full h-full bg-white rounded-lg overflow-hidden shadow-sm border">
-                                            {imagePreviews[item.path]?.loading ? (
-                                              <div className="w-full h-full flex items-center justify-center">
-                                                <Spinner className="w-8 h-8" />
-                                              </div>
-                                            ) : imagePreviews[item.path]?.error ? (
-                                              <div className="w-full h-full flex items-center justify-center bg-gray-50">
-                                                <FileImage className="w-10 h-10 text-gray-400" />
-                                              </div>
-                                            ) : imagePreviews[item.path]?.url ? (
-                                              <img
-                                                src={imagePreviews[item.path].url}
-                                                alt={item.name}
-                                                className="w-full h-full object-cover"
-                                              />
-                                            ) : (
-                                              <div className="w-full h-full flex items-center justify-center bg-gray-50">
-                                                <FileImage className="w-10 h-10 text-green-500" />
-                                              </div>
-                                            )}
-                                          </div>
-                                        ) : (
-                                          <div className="w-full h-full flex items-center justify-center">
-                                            <div className="w-20 h-20 flex items-center justify-center">
-                                              {item.type === 'folder' ? (
-                                                <div className="w-16 h-16 rounded-lg bg-blue-100 flex items-center justify-center border-2 border-blue-200">
-                                                  <Folder className="w-10 h-10 text-blue-600" />
-                                                </div>
-                                              ) : (
-                                                getLargeFileIcon(item.name, item.type)
-                                              )}
+                                    {/* File/Folder Icon or Image Preview */}
+                                    <div className="w-24 h-24 mb-2 flex items-center justify-center">
+                                      {item.type === 'file' && isImageFile(item.name) ? (
+                                        <div className="w-full h-full bg-white rounded-lg overflow-hidden shadow-sm border">
+                                          {imagePreviews[item.path]?.loading ? (
+                                            <div className="w-full h-full flex items-center justify-center">
+                                              <Spinner className="w-8 h-8" />
                                             </div>
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      {/* File Name */}
-                                      <div className="w-full px-1">
-                                        <p className="text-xs text-center text-gray-700 font-medium leading-tight break-words line-clamp-2"
-                                           title={item.name}>
-                                          {item.name}
-                                        </p>
-                                        {item.size !== undefined && (
-                                          <p className="text-xs text-gray-500 text-center mt-0.5">
-                                            {formatFileSize(item.size)}
-                                          </p>
-                                        )}
-                                      </div>
-
-                                      {/* Drop message for folders */}
-                                      {item.type === 'folder' && droppedFolderPath === item.path && (
-                                        <div className="absolute inset-0 bg-blue-500/10 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                                          <div className="text-xs text-blue-600 font-medium bg-white px-2 py-1 rounded shadow-sm">
-                                            Drop files here
+                                          ) : imagePreviews[item.path]?.error ? (
+                                            <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                              <FileImage className="w-10 h-10 text-gray-400" />
+                                            </div>
+                                          ) : imagePreviews[item.path]?.url ? (
+                                            <img
+                                              src={imagePreviews[item.path].url}
+                                              alt={item.name}
+                                              className="w-full h-full object-cover"
+                                            />
+                                          ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                              <FileImage className="w-10 h-10 text-green-500" />
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                          <div className="w-20 h-20 flex items-center justify-center">
+                                            {item.type === 'folder' ? (
+                                              <div className="w-16 h-16 rounded-lg bg-blue-100 flex items-center justify-center border-2 border-blue-200">
+                                                <Folder className="w-10 h-10 text-blue-600" />
+                                              </div>
+                                            ) : (
+                                              getLargeFileIcon(item.name, item.type)
+                                            )}
                                           </div>
                                         </div>
                                       )}
                                     </div>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent>
-                                    {item.type === 'file' && (
-                                      <>
-                                        <DropdownMenuItem onClick={() => handleDownload(item)}>
-                                          <Download className="w-4 h-4 mr-2" />
-                                          Download
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleCopyPublicLink(item)}>
-                                          <Clipboard className="w-4 h-4 mr-2" />
-                                          Copy Public Link
-                                        </DropdownMenuItem>
-                                      </>
+
+                                    {/* File Name */}
+                                    <div className="w-full px-1">
+                                      <p className="text-xs text-center text-gray-700 font-medium leading-tight break-words line-clamp-2"
+                                         title={item.name}>
+                                        {item.name}
+                                      </p>
+                                      {item.size !== undefined && (
+                                        <p className="text-xs text-gray-500 text-center mt-0.5">
+                                          {formatFileSize(item.size)}
+                                        </p>
+                                      )}
+                                    </div>
+
+                                    {/* Drop message for folders */}
+                                    {item.type === 'folder' && droppedFolderPath === item.path && (
+                                      <div className="absolute inset-0 bg-blue-500/10 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                                        <div className="text-xs text-blue-600 font-medium bg-white px-2 py-1 rounded shadow-sm">
+                                          Drop files here
+                                        </div>
+                                      </div>
                                     )}
-                                    <DropdownMenuItem
-                                      onClick={() => handleDelete(item)}
-                                      className="text-destructive"
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                  </div>
+                                </div>
                               )
                             })}
                           </div>
+
+                          {/* Context Menu for Grid View */}
+                          {contextMenuItem && contextMenuPosition && (
+                            <DropdownMenu open={true} modal={false}>
+                              <DropdownMenuTrigger asChild>
+                                <div
+                                  style={{
+                                    position: 'fixed',
+                                    left: contextMenuPosition.x,
+                                    top: contextMenuPosition.y,
+                                    pointerEvents: 'none',
+                                    zIndex: 9999
+                                  }}
+                                />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="start"
+                                side="bottom"
+                                className="z-50"
+                              >
+                                {contextMenuItem.type === 'file' && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => {
+                                      handleDownload(contextMenuItem)
+                                      setContextMenuItem(null)
+                                      setContextMenuPosition(null)
+                                    }}>
+                                      <Download className="w-4 h-4 mr-2" />
+                                      Download
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => {
+                                      handleCopyPublicLink(contextMenuItem)
+                                      setContextMenuItem(null)
+                                      setContextMenuPosition(null)
+                                    }}>
+                                      <Clipboard className="w-4 h-4 mr-2" />
+                                      Copy Public Link
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    handleDelete(contextMenuItem)
+                                    setContextMenuItem(null)
+                                    setContextMenuPosition(null)
+                                  }}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </div>
                       )}
 
