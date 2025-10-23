@@ -888,28 +888,7 @@ export default function QrCodeToolPage() {
                               Higher levels = better error recovery but denser codes
                             </p>
                           </div>
-
-                          <div className="space-y-2">
-                            <Label>Frame Style</Label>
-                            <Select value={frameType} onValueChange={(value: FrameType) => setFrameType(value)}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.entries(frameTypeOptions).map(([key, option]) => (
-                                  <SelectItem key={key} value={key}>
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{option.label}</span>
-                                      <span className="text-xs text-muted-foreground">{option.description}</span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-xs text-muted-foreground">
-                              Add decorative frames around your QR code
-                            </p>
-                          </div>
+                        
                         </div>
                       </DialogContent>
                     </Dialog>
