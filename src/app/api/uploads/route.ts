@@ -6,6 +6,37 @@ import { getToken } from 'next-auth/jwt'
 // Ensure uploads directory exists
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads')
 
+// Calculate total size of a folder recursively
+async function getFolderSize(folderPath: string): Promise<number> {
+  let totalSize = 0
+
+  try {
+    const entries = await fs.readdir(folderPath, { withFileTypes: true })
+
+    for (const entry of entries) {
+      const entryPath = path.join(folderPath, entry.name)
+
+      if (entry.isDirectory()) {
+        // Recursively calculate size for subfolders
+        totalSize += await getFolderSize(entryPath)
+      } else if (entry.isFile()) {
+        try {
+          const stats = await fs.stat(entryPath)
+          totalSize += stats.size
+        } catch {
+          // If we can't get stats, skip this file
+          continue
+        }
+      }
+    }
+  } catch {
+    // If we can't read the directory, return 0
+    return 0
+  }
+
+  return totalSize
+}
+
 async function ensureUploadsDir() {
   try {
     await fs.access(UPLOADS_DIR)
@@ -58,11 +89,20 @@ export async function GET(request: NextRequest) {
 
         try {
           const stats = await fs.stat(filePath)
+          let size: number | undefined
+
+          if (entry.isFile()) {
+            size = stats.size
+          } else if (entry.isDirectory()) {
+            // Calculate total size for folders
+            size = await getFolderSize(filePath)
+          }
+
           return {
             id: relativeEntryPath,
             name: entry.name,
             type: entry.isDirectory() ? 'folder' : 'file',
-            size: entry.isFile() ? stats.size : undefined,
+            size: size,
             modified: stats.mtime.toISOString().split('T')[0], // Format as YYYY-MM-DD
             path: relativeEntryPath,
           }
