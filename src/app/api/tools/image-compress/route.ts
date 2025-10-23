@@ -7,14 +7,21 @@ import { getToken } from 'next-auth/jwt'
 // Ensure uploads directory exists
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads')
 
-async function ensureUploadsDir(tenantId: string) {
-  const tenantDir = path.join(UPLOADS_DIR, tenantId)
+async function ensureImageCompressDir(tenantId: string) {
+  // Create date-based folder structure: image-compress/year/month/day
+  const now = new Date()
+  const year = now.getFullYear().toString()
+  const month = (now.getMonth() + 1).toString().padStart(2, '0') // Month is 0-indexed
+  const day = now.getDate().toString().padStart(2, '0')
+
+  const compressDir = path.join(UPLOADS_DIR, tenantId, 'image-compress', year, month, day)
+
   try {
-    await fs.access(tenantDir)
+    await fs.access(compressDir)
   } catch {
-    await fs.mkdir(tenantDir, { recursive: true })
+    await fs.mkdir(compressDir, { recursive: true })
   }
-  return tenantDir
+  return compressDir
 }
 
 // POST /api/tools/image-compress - Compress image
@@ -26,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const tenantId = token.activeTenantId as string
-    const tenantDir = await ensureUploadsDir(tenantId)
+    const compressDir = await ensureImageCompressDir(tenantId)
 
     const formData = await request.formData()
     const file = formData.get('image') as File
@@ -62,7 +69,7 @@ export async function POST(request: NextRequest) {
     // Generate compressed filename
     const parsedPath = path.parse(file.name)
     const compressedFileName = `compressed_${Date.now()}_${parsedPath.name}.jpg`
-    const compressedFilePath = path.join(tenantDir, compressedFileName)
+    const compressedFilePath = path.join(compressDir, compressedFileName)
 
     // Compress image using sharp
     const compressionOptions = {
