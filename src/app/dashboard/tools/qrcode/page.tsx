@@ -24,7 +24,9 @@ import {
   Calendar,
   MapPin,
   MessageSquare,
-  Settings
+  Settings,
+  File,
+  Upload
 } from "lucide-react"
 import { toast } from "sonner"
 import QRCode from 'qrcode'
@@ -32,7 +34,7 @@ import QRCode from 'qrcode'
 type QRSize = 'small' | 'medium' | 'large'
 type QRFormat = 'png' | 'jpg' | 'svg'
 type ErrorCorrectionLevel = 'L' | 'M' | 'Q' | 'H'
-type QRTemplate = 'text' | 'url' | 'email' | 'phone' | 'wifi' | 'vcard' | 'event' | 'location' | 'sms'
+type QRTemplate = 'text' | 'url' | 'email' | 'phone' | 'wifi' | 'vcard' | 'event' | 'location' | 'sms' | 'file'
 type FrameType = 'none' | 'square' | 'rounded' | 'dashed' | 'heart' | 'floral' | 'tech' | 'industrial' | 'geometric'
 
 interface QRStats {
@@ -70,6 +72,11 @@ export default function QrCodeToolPage() {
   // Template selection and data
   const [selectedTemplate, setSelectedTemplate] = useState<QRTemplate>('text')
   const [templateFormData, setTemplateFormData] = useState<TemplateFormData>({})
+
+  // File upload state
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [fileUrl, setFileUrl] = useState<string>("")
 
   // Configuration options
   const [size, setSize] = useState<QRSize>('medium')
@@ -174,6 +181,15 @@ export default function QrCodeToolPage() {
         { key: 'phone', label: 'Phone Number', placeholder: '+1 (555) 123-4567', type: 'tel', required: true },
         { key: 'message', label: 'Message', placeholder: 'Your message here...', type: 'text', required: false }
       ]
+    },
+    {
+      type: 'file',
+      label: 'File Upload',
+      description: 'Upload a file and generate QR code to access it',
+      icon: File,
+      fields: [
+        { key: 'file', label: 'Upload File', placeholder: 'Drag and drop or click to select...', type: 'text', required: true }
+      ]
     }
   ]
 
@@ -250,6 +266,8 @@ export default function QrCodeToolPage() {
         let sms = `sms:${data.phone}`
         if (data.message) sms += `?body=${encodeURIComponent(data.message)}`
         return sms
+      case 'file':
+        return fileUrl || ''
       default:
         return data.text || ''
     }
@@ -260,6 +278,15 @@ export default function QrCodeToolPage() {
     const formattedText = formatTemplateData(selectedTemplate, templateFormData)
     setText(formattedText)
   }, [selectedTemplate, templateFormData])
+
+  // Update text when file URL changes for file template
+  useEffect(() => {
+    if (selectedTemplate === 'file' && fileUrl) {
+      setText(fileUrl)
+    } else if (selectedTemplate === 'file' && !fileUrl) {
+      setText('')
+    }
+  }, [fileUrl, selectedTemplate])
 
   const sizeOptions = {
     small: { width: 200, label: 'Small (200x200)' },
@@ -588,11 +615,60 @@ export default function QrCodeToolPage() {
   const handleTemplateChange = (template: QRTemplate) => {
     setSelectedTemplate(template)
     setTemplateFormData({})
+    if (template !== 'file') {
+      setUploadedFile(null)
+      setFileUrl("")
+    }
   }
 
   const handleFormFieldChange = (key: string, value: string) => {
     setTemplateFormData(prev => ({ ...prev, [key]: value }))
   }
+
+  // File upload handler
+  const handleFileUpload = useCallback(async (file: File) => {
+    if (!file) return
+
+    setUploading(true)
+    setError("")
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/uploads', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to upload file')
+      }
+
+      const data = await response.json()
+
+      if (data.files && data.files.length > 0) {
+        const uploadedFile = data.files[0]
+        setUploadedFile(file)
+        // Construct public URL using the file's path
+        const publicUrl = `${window.location.origin}/api/files/${uploadedFile.fullPath}`
+        setFileUrl(publicUrl)
+        handleFormFieldChange('file', uploadedFile.name)
+
+        toast.success(`File uploaded successfully: ${uploadedFile.name}`)
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Failed to upload file'
+      console.error('Upload error:', error)
+      setError(errorMessage)
+      toast.error(errorMessage)
+      setUploadedFile(null)
+    } finally {
+      setUploading(false)
+    }
+  }, [])
 
   const currentTemplate = templates.find(t => t.type === selectedTemplate)
 
@@ -675,7 +751,70 @@ export default function QrCodeToolPage() {
                       {field.label}
                       {field.required && <span className="text-red-500 ml-1">*</span>}
                     </Label>
-                    {field.type === 'date-picker' ? (
+                    {field.key === 'file' && selectedTemplate === 'file' ? (
+                      <div className="space-y-2">
+                        <div
+                          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                            uploading
+                              ? 'border-primary bg-primary/5'
+                              : 'border-muted-foreground/25 hover:border-primary hover:bg-primary/5'
+                          }`}
+                          onDragOver={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const files = e.dataTransfer.files
+                            if (files.length > 0) {
+                              handleFileUpload(files[0])
+                            }
+                          }}
+                        >
+                          {uploading ? (
+                            <div className="space-y-2">
+                              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                              <p className="text-sm text-muted-foreground">Uploading...</p>
+                            </div>
+                          ) : uploadedFile ? (
+                            <div className="space-y-2">
+                              <CheckCircle className="w-8 h-8 text-green-500 mx-auto" />
+                              <p className="text-sm font-medium">{uploadedFile.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                              {fileUrl && (
+                                <p className="text-xs text-green-600">✓ File ready for QR code</p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <Upload className="w-8 h-8 text-muted-foreground mx-auto" />
+                              <p className="text-sm font-medium">Drop your file or click to select</p>
+                              <input
+                                type="file"
+                                id={`${selectedTemplate}-${field.key}`}
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0]
+                                  if (file) {
+                                    handleFileUpload(file)
+                                  }
+                                }}
+                                accept="*/*"
+                              />
+                              <label
+                                htmlFor={`${selectedTemplate}-${field.key}`}
+                                className="inline-block px-4 py-2 text-sm text-primary hover:text-primary/80 cursor-pointer underline"
+                              >
+                                Select File
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : field.type === 'date-picker' ? (
                       <DateTimePicker
                         dateTime={
                           templateFormData[field.key]

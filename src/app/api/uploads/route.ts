@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
         name: fileName,
         size: file.size,
         path: path.join(targetPath, fileName),
+        fullPath: path.relative(UPLOADS_DIR, filePath), // Include tenantId/filename
       })
     }
 
