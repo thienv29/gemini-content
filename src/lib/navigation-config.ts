@@ -38,6 +38,10 @@ export const navigationConfig: NavigationItem[] = [
       {
         title: "QR Code",
         url: "/dashboard/tools/qrcode"
+      },
+      {
+        title: "Image Compress",
+        url: "/dashboard/tools/image-compress"
       }
     ]
   },

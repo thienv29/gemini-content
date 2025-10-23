@@ -7,15 +7,17 @@ const UPLOADS_DIR = path.join(process.cwd(), 'uploads')
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
     // Extract tenant ID from query parameter
     const { searchParams } = new URL(request.url)
     const tenantId = searchParams.get('tenant')
 
+    // Await params in Next.js 15
+    const resolvedParams = await params
     // Build the full path from the URL parameters
-    const filePath = params.path.join('/')
+    const filePath = resolvedParams.path.join('/')
 
     // Ensure the path doesn't contain '..' or other dangerous patterns
     if (filePath.includes('..') || filePath.startsWith('/')) {
