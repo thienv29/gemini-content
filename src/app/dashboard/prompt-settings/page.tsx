@@ -9,11 +9,9 @@ import { SearchInput } from "@/components/ui/search-input"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
 
-import { useConfirmation } from "@/core/providers/confirmation-provider"
 import { PromptSettingForm } from "@/components/prompt-setting-form"
 import { useBulkDelete } from "@/hooks/use-bulk-delete"
 import { Loading } from "@/components/ui/loading"
-import { toast } from "sonner"
 
 
 interface PromptSetting {
@@ -44,9 +42,6 @@ export default function PromptSettingsPage() {
     totalPages: 1
   })
 
-  const { confirm } = useConfirmation()
-
-  // Form states
   const [formDialogOpen, setFormDialogOpen] = useState(false)
   const [editingSetting, setEditingSetting] = useState<PromptSetting | null>(null)
   const [cloningSetting, setCloningSetting] = useState<Partial<PromptSetting> | null>(null)

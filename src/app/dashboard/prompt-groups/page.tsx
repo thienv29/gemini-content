@@ -8,12 +8,10 @@ import { Plus, Edit, Trash, Copy } from "lucide-react"
 import { SearchInput } from "@/components/ui/search-input"
 import { ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/ui/data-table"
-import { useConfirmation } from "@/core/providers/confirmation-provider"
 import { PromptGroupForm } from "@/components/prompt-group-form"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useBulkDelete } from "@/hooks/use-bulk-delete"
 import { Loading } from "@/components/ui/loading"
-import { toast } from "sonner"
 
 
 interface PromptGroup {
@@ -51,9 +49,6 @@ export default function PromptGroupsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingGroup, setEditingGroup] = useState<PromptGroup | null>(null)
   const [cloningGroup, setCloningGroup] = useState<Partial<PromptGroup> | null>(null)
-
-
-  const { confirm } = useConfirmation()
 
   // Bulk delete functionality using shared hook
   const bulkDelete = useBulkDelete({

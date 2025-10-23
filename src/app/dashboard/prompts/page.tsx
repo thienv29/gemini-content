@@ -11,9 +11,7 @@ import { DataTable } from "@/components/ui/data-table"
 
 import { Loading } from "@/components/ui/loading"
 import { PromptForm } from "@/components/prompt-form"
-import { useConfirmation } from "@/core/providers/confirmation-provider"
 import { useBulkDelete } from "@/hooks/use-bulk-delete"
-import { toast } from "sonner"
 
 
 interface Prompt {
@@ -55,8 +53,6 @@ export default function PromptsPage() {
   const [formDialogOpen, setFormDialogOpen] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null)
   const [cloningPrompt, setCloningPrompt] = useState<Partial<Prompt> | null>(null)
-
-  const { confirm } = useConfirmation()
 
   // Bulk delete functionality using shared hook
   const bulkDelete = useBulkDelete({
