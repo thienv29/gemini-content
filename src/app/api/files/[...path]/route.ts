@@ -10,6 +10,10 @@ export async function GET(
   { params }: { params: { path: string[] } }
 ) {
   try {
+    // Extract tenant ID from query parameter
+    const { searchParams } = new URL(request.url)
+    const tenantId = searchParams.get('tenant')
+
     // Build the full path from the URL parameters
     const filePath = params.path.join('/')
 
@@ -18,8 +22,12 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid file path' }, { status: 400 })
     }
 
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Tenant ID required' }, { status: 400 })
+    }
+
     // Build the full file path
-    const fullPath = path.join(UPLOADS_DIR, filePath)
+    const fullPath = path.join(UPLOADS_DIR, tenantId, filePath)
 
     // Check if file exists
     try {

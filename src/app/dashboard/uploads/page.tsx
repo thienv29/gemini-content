@@ -28,7 +28,8 @@ import { Checkbox } from '@/components/ui/checkbox'
     FileArchive,
     FileSpreadsheet,
     Search,
-    RefreshCw
+    RefreshCw,
+    Clipboard
   } from 'lucide-react'
 import {
   Dialog,
@@ -59,6 +60,7 @@ import axios from 'axios'
 import { toast } from 'sonner'
 import { Toaster } from '@/components/ui/sonner'
 import { Spinner } from '@/components/ui/spinner'
+import { useAuthStore } from '@/stores/auth-store'
 
 interface FileItem {
   id: string
@@ -430,6 +432,27 @@ export default function UploadsPage() {
       window.URL.revokeObjectURL(url)
     } catch (error) {
       toast.error('Download failed')
+    }
+  }
+
+  const handleCopyPublicLink = async (item: FileItem) => {
+    try {
+      const { user } = useAuthStore.getState()
+      const tenantId = user?.activeTenantId
+
+      if (!tenantId) {
+        toast.error('Unable to get tenant information')
+        return
+      }
+
+      // Remove leading slash from path for the API route
+      const filePath = item.path.startsWith('/') ? item.path.substring(1) : item.path
+      const publicUrl = `${window.location.origin}/api/files/${filePath}?tenant=${tenantId}`
+
+      await navigator.clipboard.writeText(publicUrl)
+      toast.success('Public link copied to clipboard')
+    } catch (error) {
+      toast.error('Failed to copy public link')
     }
   }
 
@@ -1070,10 +1093,16 @@ export default function UploadsPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent>
                                       {item.type === 'file' && (
-                                        <DropdownMenuItem onClick={() => handleDownload(item)}>
-                                          <Download className="w-4 h-4 mr-2" />
-                                          Download
-                                        </DropdownMenuItem>
+                                        <>
+                                          <DropdownMenuItem onClick={() => handleDownload(item)}>
+                                            <Download className="w-4 h-4 mr-2" />
+                                            Download
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => handleCopyPublicLink(item)}>
+                                            <Clipboard className="w-4 h-4 mr-2" />
+                                            Copy Public Link
+                                          </DropdownMenuItem>
+                                        </>
                                       )}
                                       <DropdownMenuItem
                                         onClick={() => handleDelete(item)}
