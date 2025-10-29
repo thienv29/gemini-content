@@ -17,7 +17,11 @@ export async function middleware(request: NextRequest) {
   // Check if it's a protected API route
   if (pathname.startsWith('/api/prompts/') ||
       pathname.startsWith('/api/prompt-groups/') ||
-      pathname.startsWith('/api/prompt-settings/')) {
+      pathname.startsWith('/api/prompt-settings/') ||
+      pathname.startsWith('/api/uploads/') ||
+      pathname.startsWith('/api/tools/') ||
+      pathname.startsWith('/api/files/') ||
+      pathname.startsWith('/api/user-tenants/')) {
 
     console.log('Protected API route detected')
 
@@ -48,8 +52,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
-    "/api/prompts/:path*",
-    "/api/prompt-groups/:path*",
-    "/api/prompt-settings/:path*"
+    "/api/:path*"
   ]
 }

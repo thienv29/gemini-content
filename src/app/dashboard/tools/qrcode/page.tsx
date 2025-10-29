@@ -29,6 +29,7 @@ import {
   Upload
 } from "lucide-react"
 import { toast } from "sonner"
+import { useAuthStore } from "@/stores/auth-store"
 import QRCode from 'qrcode'
 
 type QRSize = 'small' | 'medium' | 'large'
@@ -63,6 +64,7 @@ interface TemplateFormData {
 }
 
 export default function QrCodeToolPage() {
+  const { user } = useAuthStore()
   const [text, setText] = useState("")
   const [qrCodeDataURL, setQrCodeDataURL] = useState<string>("")
   const [loading, setLoading] = useState(false)
@@ -638,8 +640,7 @@ export default function QrCodeToolPage() {
 
       const response = await fetch('/api/uploads', {
         method: 'POST',
-        body: formData,
-        credentials: 'same-origin'
+        body: formData
       })
 
       if (!response.ok) {
@@ -652,8 +653,18 @@ export default function QrCodeToolPage() {
       if (data.files && data.files.length > 0) {
         const uploadedFile = data.files[0]
         setUploadedFile(file)
-        // Construct public URL using the file's path
-        const publicUrl = `${window.location.origin}/api/files/${uploadedFile.fullPath}`
+        // Construct public URL using the file's path like in uploads page
+        const { user } = useAuthStore.getState()
+        const tenantId = user?.activeTenantId
+
+        if (!tenantId) {
+          throw new Error('Unable to get tenant information')
+        }
+
+        // Remove leading slash from path for the API route
+        const filePath = uploadedFile.path.startsWith('/') ? uploadedFile.path.substring(1) : uploadedFile.path
+        const publicUrl = `${window.location.origin}/api/files/${filePath}?tenant=${tenantId}`
+
         setFileUrl(publicUrl)
         handleFormFieldChange('file', uploadedFile.name)
 
