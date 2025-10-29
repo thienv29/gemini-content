@@ -105,8 +105,8 @@ export async function POST(request: NextRequest) {
     // Save compressed image
     await fs.writeFile(compressedFilePath, processedBuffer)
 
-    // Calculate relative path for API access
-    const relativePath = path.relative(UPLOADS_DIR, compressedFilePath)
+    // Calculate relative path for API access (relative to tenant directory)
+    const relativePath = path.relative(path.join(UPLOADS_DIR, tenantId), compressedFilePath)
 
     return NextResponse.json({
       success: true,

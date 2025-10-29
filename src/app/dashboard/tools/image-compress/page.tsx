@@ -18,6 +18,7 @@ import {
   Pause
 } from "lucide-react"
 import { toast } from "sonner"
+import { useAuthStore } from "@/stores/auth-store"
 
 interface ImageFile {
   id: string
@@ -38,6 +39,7 @@ interface CompressionResult {
 }
 
 export default function ImageCompressToolPage() {
+  const { user } = useAuthStore()
   const [selectedFiles, setSelectedFiles] = useState<ImageFile[]>([])
   const [isCompressing, setIsCompressing] = useState(false)
   const [overallProgress, setOverallProgress] = useState(0)
@@ -154,7 +156,7 @@ export default function ImageCompressToolPage() {
             originalSize: imageFile.size,
             compressedSize: result.compressedSize,
             compressionRatio: ((imageFile.size - result.compressedSize) / imageFile.size) * 100,
-            downloadUrl: `/api/files/${result.filePath}`
+            downloadUrl: user?.activeTenantId ? `/api/files/${result.filePath}?tenant=${user.activeTenantId}` : undefined
           }
         }))
 
@@ -181,7 +183,7 @@ export default function ImageCompressToolPage() {
 
     setIsCompressing(false)
     setOverallProgress(100)
-  }, [selectedFiles, isCompressing])
+  }, [selectedFiles, isCompressing, user?.activeTenantId])
 
   const downloadAll = useCallback(async () => {
     if (Object.keys(results).length === 0) return
