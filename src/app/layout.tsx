@@ -36,14 +36,16 @@ export default function RootLayout({
         <TooltipProvider delayDuration={0}>
           <SessionProvider>
             <AuthProvider>
-              <ThemeProvider
-                  attribute="class"
-                  defaultTheme="system"
-                  enableSystem
-                  disableTransitionOnChange
-                >
-                  {children}
-                </ThemeProvider>
+              <ConfirmationProvider>
+                <ThemeProvider
+                    attribute="class"
+                    defaultTheme="system"
+                    enableSystem
+                    disableTransitionOnChange
+                  >
+                    {children}
+                  </ThemeProvider>
+                </ConfirmationProvider>
               <Toaster position="bottom-left" />
             </AuthProvider>
           </SessionProvider>

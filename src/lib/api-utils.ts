@@ -27,7 +27,9 @@ export async function handleBulkDelete({ table, entityName, request, ids: provid
     }
 
     // Access the table dynamically
-    const prismaModel = (prisma as any)[table]
+    const prismaModel = (prisma as unknown as Record<string, {
+      deleteMany: (args: { where: { id: { in: string[] }, tenantId: string } }) => Promise<{ count: number }>
+    }>)[table as string]
     const result = await prismaModel.deleteMany({
       where: {
         id: {

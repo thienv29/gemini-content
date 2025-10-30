@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
-
-
+import { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +17,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
 
     // Build where clause
-    const where: any = { tenantId }
+    const where: Prisma.PromptGroupWhereInput = { tenantId }
 
     if (search) {
       where.OR = [

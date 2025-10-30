@@ -33,7 +33,22 @@ interface PromptSetting {
   topP: number
   frequencyPenalty: number
   presencePenalty: number
+  items: {
+    prompts?: Array<{
+      promptId: string
+      position: number
+    }>
+    model?: string
+  }
   prompts?: Prompt[] // Add collected prompts
+}
+
+interface PromptSettingItems {
+  prompts?: Array<{
+    promptId: string
+    position: number
+  }>
+  model?: string
 }
 
 interface GeneratedContent {
@@ -85,7 +100,7 @@ export default function ContentProductionPage() {
       case "zalo":
       case "linkedin":
       case "twitter":
-        return formatForPlatform(currentContent.content, selectedFormat as any)
+        return formatForPlatform(currentContent.content, selectedFormat as "facebook" | "zalo" | "linkedin" | "twitter")
       case "html":
         return mdToHtml(currentContent.content)
       case "original":
@@ -149,18 +164,18 @@ export default function ContentProductionPage() {
         const response = await axios.get(`/api/prompt-settings/${dialogSelectedSetting}`)
         const setting = response.data
 
-        const settingItems = setting.items as any
+        const settingItems = setting.items as PromptSettingItems
         const promptItems = settingItems?.prompts || []
 
-        const promptIds = promptItems.map((item: any) => item.promptId)
+        const promptIds = promptItems.map((item) => item.promptId)
         const promptsResponse = await axios.get('/api/prompts')
         const allPrompts = promptsResponse.data.data
 
-        const collectedPrompts = allPrompts.filter((p: any) => promptIds.includes(p.id))
+        const collectedPrompts = allPrompts.filter((p: Prompt) => promptIds.includes(p.id))
 
         // Collect unique variables from all prompts
         const allVariables = [...new Set(
-          collectedPrompts.flatMap((p: any) => Object.keys(p.variables))
+          collectedPrompts.flatMap((p: Prompt) => Object.keys(p.variables))
         )] as string[]
 
         setDialogSettingVariables(allVariables)
@@ -209,7 +224,7 @@ export default function ContentProductionPage() {
       const setting = response.data
 
       // Get prompts from setting.items.prompts (array of { promptId, position })
-      const settingItems = setting.items as any
+      const settingItems = setting.items as PromptSettingItems
       const promptItems = settingItems?.prompts || []
 
       if (!promptItems || promptItems.length === 0) {
@@ -219,8 +234,8 @@ export default function ContentProductionPage() {
 
       // Extract prompt IDs and sort by position
       const promptIds = promptItems
-        .sort((a: any, b: any) => a.position - b.position)
-        .map((item: any) => item.promptId)
+        .sort((a, b) => a.position - b.position)
+        .map((item) => item.promptId)
 
       // Fetch all prompts by IDs
       const promptsResponse = await axios.get('/api/prompts')
@@ -228,7 +243,7 @@ export default function ContentProductionPage() {
 
       // Filter to get only the prompts in this setting, maintaining order
       const collectedPrompts = promptIds
-        .map((id: string) => allPrompts.find((p: any) => p.id === id))
+        .map((id: string) => allPrompts.find((p: Prompt) => p.id === id))
         .filter(Boolean)
 
       if (collectedPrompts.length === 0) {
@@ -238,7 +253,7 @@ export default function ContentProductionPage() {
 
       let mergedContent = ""
 
-      collectedPrompts.forEach((prompt: any, index: number) => {
+      collectedPrompts.forEach((prompt: Prompt, index: number) => {
         let promptContent = prompt.content
 
         // Replace variables for this prompt

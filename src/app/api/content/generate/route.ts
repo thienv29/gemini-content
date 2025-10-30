@@ -3,6 +3,16 @@ import { GoogleGenAI } from "@google/genai"
 import { prisma } from "@/lib/prisma"
 import { getTenantId } from "@/lib/tenant"
 
+interface PromptSettingsData {
+  model?: string
+  temperature?: number
+  maxTokens?: number
+  prompts?: Array<{
+    promptId: string
+    position: number
+  }>
+}
+
 // Initialize Google AI (you'll need to set GEMINI_API_KEY in your .env)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" })
 
@@ -51,7 +61,7 @@ export async function POST(request: NextRequest) {
       })
 
       if (settings) {
-        const settingsData = settings.items as any
+        const settingsData = settings.items as PromptSettingsData
         // Use model from setting if customModel is "auto"
         if (settingsData?.model && customModel === "auto") {
           model = settingsData.model

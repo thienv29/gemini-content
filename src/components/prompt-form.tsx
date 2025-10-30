@@ -357,9 +357,9 @@ export function PromptForm({ open, onClose, editingPrompt, initialData, onSucces
                           <Label htmlFor={`group-${group.id}`} className="text-sm flex-1">
                             {group.name}
                             {group.description && (
-                              <span className="text-muted-foreground ml-2">
-                                - {group.description}
-                              </span>
+        <span className="text-muted-foreground ml-2">
+          - {group.description}
+        </span>
                             )}
                           </Label>
                         </div>

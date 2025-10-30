@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
     // Try to create the folder
     try {
       await fs.mkdir(folderPath, { recursive: false })
-    } catch (error: any) {
-      if (error.code === 'EEXIST') {
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'EEXIST') {
         return NextResponse.json({ error: 'Folder already exists' }, { status: 409 })
       }
       throw error
